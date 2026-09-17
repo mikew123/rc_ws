@@ -1,6 +1,8 @@
 """
 Robocolumbus26 pointcloud node.
 
+Creates TOF pointclouds for all 6 sensors from distance data
+
 Publish Combined Lidar and TOF point clouds
 Publish number of points in combined point cloud within a xyz region
     Ignore distance = 0 and Inf
@@ -26,7 +28,6 @@ from robocolumbus_interfaces.msg import Float32X8, TofDist
 
 class PcdNode(Node):
     '''
-    Uses pcd4 point cloud processing library
     '''
 
     def __init__(self):
@@ -49,10 +50,12 @@ class PcdNode(Node):
                                         , self.tof_rl_subscription_callback, 10)
         self.tof_rr_pcd_subscription = self.create_subscription(PointCloud2, 'tof_rr'
                                         , self.tof_rr_subscription_callback, 10)
-
         self.lidar_subscription = self.create_subscription(LaserScan,"/scan" 
                                             , self.lidar_subscription_callback, 10)
+
+        
         self.combined_pcd_publisher = self.create_publisher(PointCloud2, "combined_pcd", 10)
+
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
 

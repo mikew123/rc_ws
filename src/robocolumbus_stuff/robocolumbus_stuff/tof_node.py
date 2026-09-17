@@ -64,8 +64,11 @@ class TofNode(Node):
         self.tof_rc_pcd_publisher = self.create_publisher(PointCloud2, 'tof_rc', 10)
         self.tof_rl_pcd_publisher = self.create_publisher(PointCloud2, 'tof_rl', 10)
         self.tof_rr_pcd_publisher = self.create_publisher(PointCloud2, 'tof_rr', 10)
-
         self.tof_fc_mid_publisher = self.create_publisher(Float32X8, 'tof_fc_mid', 10)
+
+        self.tof_dist_subscriber = self.create_subscription(TofDist, 'tof_dist'
+                                            , self.tof_dist_callback, 10)
+
         self.tof_dist_publisher = self.create_publisher(TofDist, 'tof_dist', 10)
       
         # timer to check serial port
@@ -99,7 +102,7 @@ class TofNode(Node):
         serialOpen = False
         while not serialOpen :
             try :
-                self.ser = serial.Serial(self.serial_port[self.serial_port_idx], self.baudrate, timeout=1)
+                self.ser = serial.Serial(self.serial_port[self.serial_port_idx], self.baudrate, timeout=0.1)
                 self.get_logger().info(f"openSerialPort: Serial port {self.serial_port[self.serial_port_idx]} opened.")
                 serialOpen = True
 
@@ -114,7 +117,7 @@ class TofNode(Node):
         # Check if a line has been received on the serial port
         err:bool=False
         try :
-            if self.ser.in_waiting > 0 :
+            if self.ser.in_waiting > 200 : # 200 is min TOF string size 
                 received_data:str = self.ser.readline().decode().strip()
                 # self.get_logger().info(f"getSerialData: {received_data=}")
                 return received_data # Exit while 1 loop
@@ -144,10 +147,10 @@ class TofNode(Node):
     
     # check serial port at timerRateHz and parse out messages to publish
     def timer_callback(self):
-        
+    
         received_data = self.getSerialData()
         if received_data == None : return
-
+    
         # self.get_logger().info(f"{received_data=}")
 
         try :
@@ -178,12 +181,12 @@ class TofNode(Node):
         except Exception as ex:
             self.get_logger().error(f"TOF sensors serial json Exception {ex} : {received_data}")
             return
-
-        # publish front center mid row point cloud    
-        self.tof_pcd_publish(tof_ab, packet)
         
         # publish raw data from sensors
         self.tof_sensor_publish(tof_ab, packet)
+
+        # # publish front center mid row point cloud    
+        # self.tof_pcd_publish(tof_ab, packet)
         
     # publish the "raw" TOF sensor distance data
     # nav_node uses the distance data instead of pcd
@@ -203,22 +206,20 @@ class TofNode(Node):
         msg.dist = dist
         self.tof_dist_publisher.publish(msg)
 
+    # Process the TOF distance topics to create Point Clouds
+    # Each topic message hass the TOF sensor name as well as the 64 distance points
+    def tof_dist_callback(self, msg) -> None :
+    
+        tof_ab = msg.tof
+        data = msg.dist # 64 int16 list
+        self.tof_pcd_publish(tof_ab, data)
+
     # AMCL uses pcd for obstical detection
     # 8x8 point cloud for each sensor FOV 45degx45deg
     # calculate x,y,z for each point
     # TODO: Optimize math with numpy
-    def tof_pcd_publish(self, tof_ab, packet) -> None:
-        # self.get_logger().info(f"tof_Publish: {tof_ab=} {packet=}")
-
-        tof = packet.get(tof_ab)
-        if "dist" in tof :
-            dist = tof.get("dist")
-        else :
-            self.get_logger().error(f"tof_Publish: no dist data")
-            return
-        
-        # self.get_logger().info(f"tof_Publish: {dist=}")
-        # return
+    def tof_pcd_publish(self, tof_ab, data) -> None:
+        # self.get_logger().info(f"tof_Publish: {tof_ab=} {data=}")
 
         fov = 45.0
         fovPt = fov/8 # FOV for each 8x8 sensor point
@@ -233,6 +234,9 @@ class TofNode(Node):
             s:float = math.sin(theta)
             if n == 0 : s0 = s
             tofCurveCor.append(s0/s)            
+
+        # data is a liinear array of 64 values that needs to be converted to 8x8 array
+        dist = np.array(data).reshape(8, 8)
 
         # pointcloud is a list of tupples(x,y,z)
         xyz0:list = []
