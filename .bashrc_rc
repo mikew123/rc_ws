@@ -7,23 +7,23 @@ export ROS_DOMAIN_ID=0
 
 source /opt/ros/jazzy/setup.bash
 source ~/depthai_ws/install/setup.bash
-source ~/rc25_ws/install/setup.bash
+source ~/rc_ws/install/setup.bash
 source ~/sllidar_ros2/install/setup.bash
 source ~/ros_coneslayer/install/setup.bash
-cd ~/rc25_ws
+cd ~/rc_ws
 
-alias rc25=' \
+alias rc=' \
 clear; \
  export ROS_LOG_DIR=~/sambashare/logs/log-`date +"%m_%d_%Y_%I-%M"` ; \
- cd ~/rc25_ws ; colcon build ; source install/setup.bash ; \
+ cd ~/rc_ws ; colcon build ; source install/setup.bash ; \
  parallel --lb ::: \
  "ros2 launch robocolumbus_stuff bringup_launch.py" \
  "ros2 launch rosbridge_server rosbridge_websocket_launch.xml" \
  "sleep 5 ; ros2 launch depthai_descriptions urdf_launch.py" \
- wait ; echo "RC25 terminated" \
+ wait ; echo "RC terminated" \
 '
 
-alias rc25_bag=' \
+alias rc_bag=' \
 cd ~/sambashare/rosbags ; \
 ros2 bag record -s mcap -b 500000000 \
 --topics /cmd_vel /cmd_vel_smoothed /cmd_vel/teleop\
@@ -36,7 +36,7 @@ ros2 bag record -s mcap -b 500000000 \
          /json_msg /color/spatial_detections
 '
 
-alias rc25_kill='source  ~/kill_ros2'
+alias rc_kill='source  ~/kill_ros2'
 
 # too much data for bag /color/image /color/camera_info
 
