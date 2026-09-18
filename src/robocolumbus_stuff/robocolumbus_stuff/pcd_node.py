@@ -26,6 +26,7 @@ from std_msgs.msg import String
 from tf2_ros import TransformException
 from tf2_ros.buffer import Buffer
 from tf2_ros.transform_listener import TransformListener
+from rclpy.time import Time
 
 from robocolumbus_interfaces.msg import Float32X8, TofDist
 
@@ -62,6 +63,7 @@ class PcdNode(Node):
         time.sleep(2) # wait for speaker node to be ready for json message!!??
 
         self.init_variables()
+        self.tf_init_timer = self.create_timer(0.1, self.init_tof_transforms)
 
         self.tts("Point Cloud Node Started")
         self.get_logger().info(f"PcdNode Started")
@@ -74,6 +76,61 @@ class PcdNode(Node):
         self.tof_rc_pcd = PointCloud2()
         self.tof_rl_pcd = PointCloud2()
         self.tof_rr_pcd = PointCloud2()
+
+        self.tof_fc_pcd_rdy = False
+        self.tof_fl_pcd_rdy = False
+        self.tof_fr_pcd_rdy = False
+        self.tof_rc_pcd_rdy = False
+        self.tof_rl_pcd_rdy = False
+        self.tof_rr_pcd_rdy = False
+
+        self.tof_pcd_sources = (
+            ("tof_fc_pcd", "tof_fc_pcd_rdy", "tof_fc_link"),
+            ("tof_fl_pcd", "tof_fl_pcd_rdy", "tof_fl_link"),
+            ("tof_fr_pcd", "tof_fr_pcd_rdy", "tof_fr_link"),
+            ("tof_rc_pcd", "tof_rc_pcd_rdy", "tof_rc_link"),
+            ("tof_rl_pcd", "tof_rl_pcd_rdy", "tof_rl_link"),
+            ("tof_rr_pcd", "tof_rr_pcd_rdy", "tof_rr_link"),
+        )
+        self.tof_frames = (
+            "tof_fc_link", "tof_fl_link", "tof_fr_link",
+            "tof_rc_link", "tof_rl_link", "tof_rr_link",
+        )
+        self.tof_transforms = {}
+
+    def init_tof_transforms(self) -> None:
+        """Cache the fixed transform from every TOF frame into lidar_link."""
+        try:
+            for frame in self.tof_frames:
+                transform = self.tf_buffer.lookup_transform(
+                    "lidar_link", frame, Time())
+                translation = transform.transform.translation
+                rotation = transform.transform.rotation
+                self.tof_transforms[frame] = (
+                    np.asarray((translation.x, translation.y, translation.z), dtype=np.float32),
+                    np.asarray((rotation.x, rotation.y, rotation.z, rotation.w), dtype=np.float32),
+                )
+        except TransformException as ex:
+            self.get_logger().warning(f"Waiting for static TOF transforms: {ex}")
+            return
+
+        self.tf_init_timer.cancel()
+        self.get_logger().info("Cached static TOF transforms relative to lidar_link")
+
+    @staticmethod
+    def transform_points(points, transform):
+        """Apply a cached translation and quaternion rotation to xyz points."""
+        translation, quaternion = transform
+        qx, qy, qz, qw = quaternion
+        rotation = np.asarray((
+            (1.0 - 2.0 * (qy * qy + qz * qz), 2.0 * (qx * qy - qz * qw),
+             2.0 * (qx * qz + qy * qw)),
+            (2.0 * (qx * qy + qz * qw), 1.0 - 2.0 * (qx * qx + qz * qz),
+             2.0 * (qy * qz - qx * qw)),
+            (2.0 * (qx * qz - qy * qw), 2.0 * (qy * qz + qx * qw),
+             1.0 - 2.0 * (qx * qx + qy * qy)),
+        ), dtype=np.float32)
+        return points @ rotation.T + translation
 
     def lidar_subscription_callback(self, msg: LaserScan) -> None:
         """
@@ -115,8 +172,38 @@ class PcdNode(Node):
             row_step=points.nbytes,
             data=points.tobytes())
 
-       
-        combined_pcd = lidar_pcd
+        # Consume each TOF cloud at most once. The lidar scan supplies the
+        # timestamp for the combined cloud.
+        combined_points = [points]
+        for pcd_attribute, ready_attribute, sensor_frame in self.tof_pcd_sources:
+            if not getattr(self, ready_attribute):
+                continue
+
+            tof_pcd = getattr(self, pcd_attribute)
+            setattr(self, ready_attribute, False)
+            tof_points = np.frombuffer(tof_pcd.data, dtype=np.float32)
+            if tof_pcd.point_step != itemsize * 3 or tof_points.size % 3 != 0:
+                self.get_logger().warning(
+                    f"Ignoring malformed {pcd_attribute}: point_step={tof_pcd.point_step}")
+                continue
+            if sensor_frame not in self.tof_transforms:
+                self.get_logger().warning(
+                    f"Ignoring {pcd_attribute}: static transform to lidar_link is not ready")
+                continue
+            combined_points.append(self.transform_points(
+                tof_points.reshape((-1, 3)), self.tof_transforms[sensor_frame]))
+
+        points = np.concatenate(combined_points, axis=0)
+        combined_pcd = PointCloud2(
+            header=msg.header,
+            height=1,
+            width=points.shape[0],
+            is_dense=False,
+            is_bigendian=False,
+            fields=fields,
+            point_step=itemsize * 3,
+            row_step=points.nbytes,
+            data=points.astype(np.float32, copy=False).tobytes())
 
         self.combined_pcd_publisher.publish(combined_pcd)
 
@@ -176,34 +263,38 @@ class PcdNode(Node):
                 
                 xyz0.append((xx0,yy0,zz0))
         
-        # self.get_logger().info(f"tof_Publish: {xyz0=}")
-
         # publish tof point clouds for each sensor
         # and save point cloud for creation of combined point cloud
         if tof_ab == "tof_fc" :
             pcd = self.point_cloud(xyz0, 'tof_fc_link')
             self.tof_fc_pcd_publisher.publish(pcd)
             self.tof_fc_pcd = pcd
+            self.tof_fc_pcd_rdy = True
         elif tof_ab == "tof_fl" :
             pcd = self.point_cloud(xyz0, 'tof_fl_link')
             self.tof_fl_pcd_publisher.publish(pcd)
             self.tof_fl_pcd = pcd
+            self.tof_fl_pcd_rdy = True
         elif tof_ab == "tof_fr" :
             pcd = self.point_cloud(xyz0, 'tof_fr_link')
             self.tof_fr_pcd_publisher.publish(pcd)
             self.tof_fr_pcd = pcd
+            self.tof_fr_pcd_rdy = True
         elif tof_ab == "tof_rc" :
             pcd = self.point_cloud(xyz0, 'tof_rc_link')
             self.tof_rc_pcd_publisher.publish(pcd)
             self.tof_rc_pcd = pcd
+            self.tof_rc_pcd_rdy = True
         elif tof_ab == "tof_rl" :
             pcd = self.point_cloud(xyz0, 'tof_rl_link')
             self.tof_rl_pcd_publisher.publish(pcd)
             self.tof_rl_pcd = pcd
+            self.tof_rl_pcd_rdy = True
         elif tof_ab == "tof_rr" :
             pcd = self.point_cloud(xyz0, 'tof_rr_link')
             self.tof_rr_pcd_publisher.publish(pcd)
             self.tof_rr_pcd = pcd
+            self.tof_rr_pcd_rdy = True
 
         if tof_ab == "tof_fc" :
             # Publish the mid row distances as Float32X8 message for nav node
