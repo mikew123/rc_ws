@@ -40,19 +40,6 @@ class PcdNode(Node):
         self.json_msg_publisher = self.create_publisher(String, "json_msg", 10)
         self.json_msg_subscription = self.create_subscription(String, "json_msg"
                                         , self.json_msg_callback, 10)
-
-        self.tof_fc_pcd_subscription = self.create_subscription(PointCloud2, 'tof_fc'
-                                        , self.tof_fc_subscription_callback, 10)
-        self.tof_fl_pcd_subscription = self.create_subscription(PointCloud2, 'tof_fl'
-                                        , self.tof_fl_subscription_callback, 10)
-        self.tof_fr_pcd_subscription = self.create_subscription(PointCloud2, 'tof_fr'
-                                        , self.tof_fr_subscription_callback, 10)
-        self.tof_rc_pcd_subscription = self.create_subscription(PointCloud2, 'tof_rc'
-                                        , self.tof_rc_subscription_callback, 10)
-        self.tof_rl_pcd_subscription = self.create_subscription(PointCloud2, 'tof_rl'
-                                        , self.tof_rl_subscription_callback, 10)
-        self.tof_rr_pcd_subscription = self.create_subscription(PointCloud2, 'tof_rr'
-                                        , self.tof_rr_subscription_callback, 10)
         self.lidar_subscription = self.create_subscription(LaserScan,"/scan" 
                                             , self.lidar_subscription_callback, 10)
         self.tof_dist_subscriber = self.create_subscription(TofDist, 'tof_dist'
@@ -87,24 +74,6 @@ class PcdNode(Node):
         self.tof_rc_pcd = PointCloud2()
         self.tof_rl_pcd = PointCloud2()
         self.tof_rr_pcd = PointCloud2()
-
-    def tof_fc_subscription_callback(self, msg: PointCloud2) -> None:
-        self.tof_fc_pcd = msg
-
-    def tof_fl_subscription_callback(self, msg: PointCloud2) -> None:
-        self.tof_fl_pcd = msg
-
-    def tof_fr_subscription_callback(self, msg: PointCloud2) -> None:
-        self.tof_fr_pcd = msg
-
-    def tof_rc_subscription_callback(self, msg: PointCloud2) -> None:
-        self.tof_rc_pcd = msg
-
-    def tof_rl_subscription_callback(self, msg: PointCloud2) -> None:
-        self.tof_rl_pcd = msg
-
-    def tof_rr_subscription_callback(self, msg: PointCloud2) -> None:
-        self.tof_rr_pcd = msg
 
     def lidar_subscription_callback(self, msg: LaserScan) -> None:
         """
@@ -155,7 +124,6 @@ class PcdNode(Node):
     # Process the TOF distance topics to create Point Clouds
     # Each topic message hass the TOF sensor name as well as the 64 distance points
     def tof_dist_callback(self, msg) -> None :
-    
         tof_ab = msg.tof
         data = msg.dist # 64 int16 list
         self.tof_pcd_publish(tof_ab, data)
@@ -210,24 +178,32 @@ class PcdNode(Node):
         
         # self.get_logger().info(f"tof_Publish: {xyz0=}")
 
+        # publish tof point clouds for each sensor
+        # and save point cloud for creation of combined point cloud
         if tof_ab == "tof_fc" :
             pcd = self.point_cloud(xyz0, 'tof_fc_link')
             self.tof_fc_pcd_publisher.publish(pcd)
+            self.tof_fc_pcd = pcd
         elif tof_ab == "tof_fl" :
             pcd = self.point_cloud(xyz0, 'tof_fl_link')
             self.tof_fl_pcd_publisher.publish(pcd)
+            self.tof_fl_pcd = pcd
         elif tof_ab == "tof_fr" :
             pcd = self.point_cloud(xyz0, 'tof_fr_link')
             self.tof_fr_pcd_publisher.publish(pcd)
+            self.tof_fr_pcd = pcd
         elif tof_ab == "tof_rc" :
             pcd = self.point_cloud(xyz0, 'tof_rc_link')
             self.tof_rc_pcd_publisher.publish(pcd)
+            self.tof_rc_pcd = pcd
         elif tof_ab == "tof_rl" :
             pcd = self.point_cloud(xyz0, 'tof_rl_link')
             self.tof_rl_pcd_publisher.publish(pcd)
+            self.tof_rl_pcd = pcd
         elif tof_ab == "tof_rr" :
             pcd = self.point_cloud(xyz0, 'tof_rr_link')
             self.tof_rr_pcd_publisher.publish(pcd)
+            self.tof_rr_pcd = pcd
 
         if tof_ab == "tof_fc" :
             # Publish the mid row distances as Float32X8 message for nav node
