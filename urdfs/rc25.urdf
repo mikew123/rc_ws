@@ -80,8 +80,8 @@
  
   <link name="base_link">
     <visual name="robot_body">
-      <origin xyz="0.220 0.0 0.070" rpy="0 0 0"/>
-      <geometry> <box size="0.650 0.380 0.250"/> </geometry>
+      <origin xyz="0.220 0.0 0.120" rpy="0 0 0"/>
+      <geometry> <box size="0.650 0.380 0.350"/> </geometry>
       <material name="orange"/>
     </visual>
     <visual name="RL_wheel">

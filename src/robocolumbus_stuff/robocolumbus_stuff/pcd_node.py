@@ -260,8 +260,8 @@ class PcdNode(Node):
                     xx0 = np.float32(Wx/1000.0)
                     yy0 = np.float32(Wy/1000.0)
                     zz0 = np.float32(Wz/1000.0)
-                
-                xyz0.append((xx0,yy0,zz0))
+                    # do not save Inf or NaN data into pointcloud
+                    xyz0.append((xx0,yy0,zz0))
         
         # publish tof point clouds for each sensor
         # and save point cloud for creation of combined point cloud
