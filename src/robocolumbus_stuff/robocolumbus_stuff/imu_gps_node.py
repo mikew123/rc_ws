@@ -217,14 +217,6 @@ class ImuGpsNode(Node):
     
     # check serial port at timerRateHz and parse out messages to publish
     def timer_callback(self):
-        # Check if a line has been received on the serial port
-        # if self.ser.in_waiting > 0:
-        #     try :
-        #         received_data = self.ser.readline().decode().strip()
-        #         #self.get_logger().info(f"Received engine json: {received_data}")
-        #     except Exception as ex:
-        #         self.get_logger().error(f"IMU GPS serial read failure : {ex}")
-        #         return
 
         received_data = self.getSerialData()
         if received_data == None : return

@@ -161,16 +161,16 @@ class PcdNode(Node):
                              datatype=PointField.FLOAT32, count=1)
                   for index, name in enumerate(("x", "y", "z"))]
         
-        lidar_pcd = PointCloud2(
-            header=msg.header,
-            height=1,
-            width=points.shape[0],
-            is_dense=True,
-            is_bigendian=False,
-            fields=fields,
-            point_step=points.strides[0],
-            row_step=points.nbytes,
-            data=points.tobytes())
+        # lidar_pcd = PointCloud2(
+        #     header=msg.header,
+        #     height=1,
+        #     width=points.shape[0],
+        #     is_dense=True,
+        #     is_bigendian=False,
+        #     fields=fields,
+        #     point_step=points.strides[0],
+        #     row_step=points.nbytes,
+        #     data=points.tobytes())
 
         # Consume each TOF cloud at most once. The lidar scan supplies the
         # timestamp for the combined cloud.
