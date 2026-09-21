@@ -161,7 +161,7 @@
   <joint name="oak-d-base-frame" type="fixed">
     <parent link="base_link"/>
     <child link="oak-d-base-frame"/>
-    <origin xyz="0.340 0.00 0.240" rpy="0 0 0.05"/>
+    <origin xyz="0.340 0.00 0.240" rpy="0.00 -0.05 0.00"/>
   </joint>
 
   <link name="oak-d-base-frame">
