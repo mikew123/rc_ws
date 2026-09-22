@@ -8,6 +8,8 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_python REQUIRED)
 find_package(nlohmann_json REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(robocolumbus_interfaces REQUIRED)
 find_package(std_msgs REQUIRED)
@@ -20,7 +22,16 @@ ament_target_dependencies(tof_node
 )
 target_link_libraries(tof_node nlohmann_json::nlohmann_json)
 
-install(TARGETS tof_node
+add_executable(wheel_controler_node src/wheel_controler_node.cpp)
+ament_target_dependencies(wheel_controler_node
+  geometry_msgs
+  nav_msgs
+  rclcpp
+  std_msgs
+)
+target_link_libraries(wheel_controler_node nlohmann_json::nlohmann_json)
+
+install(TARGETS tof_node wheel_controler_node
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -34,7 +45,6 @@ install(PROGRAMS
   robocolumbus_stuff/pcd_node.py
   robocolumbus_stuff/speaker_node.py
   robocolumbus_stuff/teleop_node.py
-  robocolumbus_stuff/wheel_controler_node.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

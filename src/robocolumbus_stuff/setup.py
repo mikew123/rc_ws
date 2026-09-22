@@ -26,7 +26,6 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'wheel_controler_node = robocolumbus_stuff.wheel_controler_node:main',
             'teleop_node = robocolumbus_stuff.teleop_node:main',
             'imu_gps_node = robocolumbus_stuff.imu_gps_node:main',
             'cone_node = robocolumbus_stuff.cone_node:main',
