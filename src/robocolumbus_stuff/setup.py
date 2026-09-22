@@ -30,7 +30,6 @@ setup(
             'imu_gps_node = robocolumbus_stuff.imu_gps_node:main',
             'cone_node = robocolumbus_stuff.cone_node:main',
             'nav_node = robocolumbus_stuff.nav_node:main',
-            'tof_node = robocolumbus_stuff.tof_node:main',
             'speaker_node = robocolumbus_stuff.speaker_node:main',
             'controller_node = robocolumbus_stuff.controller_node:main',
             'pcd_node = robocolumbus_stuff.pcd_node:main',
