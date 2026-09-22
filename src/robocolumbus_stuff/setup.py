@@ -27,7 +27,6 @@ setup(
     entry_points={
         'console_scripts': [
             'teleop_node = robocolumbus_stuff.teleop_node:main',
-            'imu_gps_node = robocolumbus_stuff.imu_gps_node:main',
             'cone_node = robocolumbus_stuff.cone_node:main',
             'nav_node = robocolumbus_stuff.nav_node:main',
             'speaker_node = robocolumbus_stuff.speaker_node:main',

@@ -12,6 +12,7 @@ find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(robocolumbus_interfaces REQUIRED)
+find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 
 add_executable(tof_node src/tof_node.cpp)
@@ -31,7 +32,16 @@ ament_target_dependencies(wheel_controler_node
 )
 target_link_libraries(wheel_controler_node nlohmann_json::nlohmann_json)
 
-install(TARGETS tof_node wheel_controler_node
+add_executable(imu_gps_node src/imu_gps_node.cpp)
+ament_target_dependencies(imu_gps_node
+  rclcpp
+  robocolumbus_interfaces
+  sensor_msgs
+  std_msgs
+)
+target_link_libraries(imu_gps_node nlohmann_json::nlohmann_json)
+
+install(TARGETS tof_node wheel_controler_node imu_gps_node
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -40,7 +50,6 @@ ament_python_install_package(${PROJECT_NAME})
 install(PROGRAMS
   robocolumbus_stuff/cone_node.py
   robocolumbus_stuff/controller_node.py
-  robocolumbus_stuff/imu_gps_node.py
   robocolumbus_stuff/nav_node.py
   robocolumbus_stuff/pcd_node.py
   robocolumbus_stuff/speaker_node.py

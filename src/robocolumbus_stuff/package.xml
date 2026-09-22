@@ -18,13 +18,13 @@
   <depend>nlohmann_json</depend>
   <depend>rclcpp</depend>
   <depend>robocolumbus_interfaces</depend>
+  <depend>sensor_msgs</depend>
   <depend>std_msgs</depend>
 
   <exec_depend>rclpy</exec_depend>
   <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>nav_msgs</exec_depend>
   <exec_depend>tf2_ros</exec_depend>
-  <exec_depend>pyserial</exec_depend>
   <export>
     <build_type>ament_cmake</build_type>
   </export>
