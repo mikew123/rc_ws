@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
-<robot name="rc25" xmlns:xacro="http://ros.org/wiki/xacro">
+<robot name="rc" xmlns:xacro="http://ros.org/wiki/xacro">
 
-<!-- Robocolubus 2025 robot model -->
+<!-- Robocolubus robot model -->
   <!-- Init colours -->
   <material name="black">
       <color rgba="0.0 0.0 0.0 1.0"/>

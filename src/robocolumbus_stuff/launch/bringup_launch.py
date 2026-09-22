@@ -1,13 +1,13 @@
-# .bashrc has an alias "rc25" which builds launches this project
+# .bashrc has an alias "rc" which builds launches this project
 # as well as the delphi_descriptins urdf launch file
 # The extra delayed urdf launch fixes the oak frame issues when nav2 is launched
 #
-# alias rc25=' \
-#  cd ~/rc25_ws ; colcon build ; source install/setup.bash ; \
+# alias rc=' \
+#  cd ~/rc_ws ; colcon build ; source install/setup.bash ; \
 #  parallel --lb ::: \
 #  "ros2 launch robocolumbus_stuff bringup_launch.py" \
 #  "sleep 5 ; ros2 launch depthai_descriptions urdf_launch.py" ; \
-#  wait ; echo "RC25 terminated" \
+#  wait ; echo "RC terminated" \
 # '
 
 import launch
@@ -32,7 +32,7 @@ def generate_launch_description():
     bridge_launch_dir = os.path.join(bridge_bringup_dir, 'launch')
  
     # Get the text of the robot description URDF - robot_stat_publisher does not open a file
-    with open('urdfs/rc25.urdf','r') as infp:
+    with open('urdfs/rc.urdf','r') as infp:
         robot_desc = infp.read()
 
     return launch.LaunchDescription([
@@ -47,7 +47,7 @@ def generate_launch_description():
                 )
             ),
             launch_arguments={
-                'params_file': 'config/rc25_params.yaml',
+                'params_file': 'config/rc_params.yaml',
                 "map": "maps/2000x2000_empty_map.yaml",
                 # "use_localization" : "False",
                 "use_localization" : "True",
@@ -59,7 +59,7 @@ def generate_launch_description():
         #         'src/robocolumbus_stuff/launch/noamcl_nav2_launch.py'
         #     ),
         #     launch_arguments={
-        #         'params_file': 'config/rc25_params.yaml',
+        #         'params_file': 'config/rc_params.yaml',
         #         "map": "maps/2000x2000_empty_map.yaml",
         #         "use_localization" : "False",
         #         # "use_localization" : "True",
@@ -85,7 +85,7 @@ def generate_launch_description():
         ),
 
 
-        #### MY ROBOT RC25 packages
+        #### MY ROBOT RC packages
 
         launch_ros.actions.Node(
             package='robocolumbus_stuff',
@@ -160,7 +160,7 @@ def generate_launch_description():
             parameters=[{
                 'robot_description':robot_desc,
                 }],
-            remappings=[('/robot_description', '/rc25/robot_description')],
+            remappings=[('/robot_description', '/rc/robot_description')],
         ),
 
         launch_ros.actions.Node(
