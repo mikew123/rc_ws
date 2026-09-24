@@ -26,7 +26,9 @@ clear; \
 alias rc_bag=' \
 cd ~/sambashare/rosbags ; \
 ros2 bag record -s mcap -b 500000000 \
---topics /cmd_vel /cmd_vel_smoothed /cmd_vel/teleop\
+--topics /cmd_vel /cmd_vel_smoothed /cmd_vel/teleop \
+         /combined_pcd /tof_dist /tof_fc_mid \
+         /rc/robot_description /robot_description \
          /battery_status /tf /tf_static /cone_point_cam /cone_point_lidar \
          /global_costmap/costmap /local_costmap/costmap \
          /scan /tof_fc /tof_fl /tof_fr /tof_rc /tof_rl /tof_rr \

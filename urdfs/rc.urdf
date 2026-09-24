@@ -194,7 +194,7 @@
   <joint name="tof_fl_joint" type="fixed">
     <parent link="tof_fc_link"/>
     <child link="tof_fl_link"/>
-    <origin xyz="-0.03 0.01 0.02" rpy="0.05 0 0.75"/>
+    <origin xyz="-0.02 0.01 0.02" rpy="0.05 0 0.75"/>
   </joint>
   <link name="tof_fl_link">
     <visual>
@@ -209,7 +209,7 @@
   <joint name="tof_fr_joint" type="fixed">
     <parent link="tof_fc_link"/>
     <child link="tof_fr_link"/>
-    <origin xyz="0 -0.01 0.01" rpy="-0.05 0 -0.75"/>
+    <origin xyz="-0.02 -0.01 0.01" rpy="-0.05 0 -0.75"/>
   </joint>
   <link name="tof_fr_link">
     <visual>

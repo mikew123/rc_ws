@@ -202,7 +202,7 @@ class ConeNode(Node):
     coneMinMaxDiffMin = np.float32(0.005)
     coneRadius        = np.float32(0.05) # 100mm diameter at Lidar scan height     
     diffJump          = np.float32(0.15)
-    coneRayMax        = np.float32(2.5)
+    coneRayMax        = np.float32(1.0)
 
     # Cone detection from Lidar LaserScan data - publish /cone_point/cam
     def lidar_subscription_callback(self, msg: LaserScan) -> None:
