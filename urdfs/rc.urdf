@@ -126,7 +126,7 @@
   <joint name="lidar_joint" type="fixed">
     <parent link="base_link"/>
     <child link="lidar_link"/>
-    <origin xyz="0.180 0 0.300" rpy="0 0 -0.05"/>
+    <origin xyz="0.180 0 0.300" rpy="0 0 -0.02"/>
   </joint>
 
   <link name="lidar_link">
@@ -179,7 +179,7 @@
   <joint name="tof_fc_joint" type="fixed">
     <parent link="base_link"/>
     <child link="tof_fc_link"/>
-    <origin xyz="0.650 0 0.09" rpy="0.0 -0.15 0.02"/>
+    <origin xyz="0.650 0 0.05" rpy="-0.05 -0.15 0.02"/>
   </joint>
   <link name="tof_fc_link">
     <visual>
