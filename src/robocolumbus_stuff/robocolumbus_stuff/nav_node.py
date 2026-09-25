@@ -1388,6 +1388,10 @@ class NavNode(Node):
             self.tts("Backup")
             self.cd_sub_state = 0
 
+        rc_ob_dist = self.tof_rc_obstacle_dist
+        rl_ob_dist = self.tof_rl_obstacle_dist
+        rr_ob_dist = self.tof_rr_obstacle_dist
+
         cur_time = time.time_ns()*1e-9            
         killSwitchActive:bool = ks
         killSwitchChange = ksc
@@ -1416,10 +1420,46 @@ class NavNode(Node):
                 # t = 1.5*dist/vel
                 t = dist/vel
                 if (cur_time - self.cd_sub_timer) < t :
-                    # manual back up to avoid collision detect
-                    msg.linear.x = -vel 
+                    # manual back up with collision detect and avoid
+
+                    # linear velocity reduces when any rear sensor detects close
+                    x = vel 
+                    xc = 1.0
+                    xr = 1.0
+                    xl = 1.0
+                    # angular velocity steers away from right or left obstical detection
+                    a = 0.0
+                    ac = 0.0
+                    ar = 0.0
+                    al = 0.0
+
+                    if rc_ob_dist < 0.1 :
+                        xc = 0.0
+                    elif rc_ob_dist < 0.3 :
+                        xc = 1.0 - (0.3 - rc_ob_dist)/0.3
+                    if rr_ob_dist < 0.1 :
+                        xr = 0.0
+                        ar = -1.0
+                    elif rr_ob_dist < 0.3 :
+                        xr = 1.0 - (0.3 - rr_ob_dist)/0.3
+                        ar = -0.5
+                    if rl_ob_dist < 0.1 :
+                        xl = 0.0
+                        al = +1.0
+                    elif rl_ob_dist < 0.3 :
+                        xl = 1.0 - (0.3 - rr_ob_dist)/0.3
+                        al = +0.5
+                    # add all angular velocities to maximally avoid the obstical
+                    # NOTE: if L and R are equal they cancel out and no rotation
+                    a += ac + ar + al
+                    msg.angular.z = a
+
+                    # select the minimum linear velocity adjustment
+                    x *= np.min((xc,xr,xl))
+                    msg.linear.x = -x 
                 else :
                     msg.linear.x = 0.0 # stop
+                    msg.angular.z = 0.0
                     self.cd_sub_state = 3 #2
                 self.cmd_vel_publisher.publish(msg)
 
@@ -1585,6 +1625,9 @@ class NavNode(Node):
     tof_fc_obstacle_dist:np.float32 = np.inf
     tof_fl_obstacle_dist:np.float32 = np.inf
     tof_fr_obstacle_dist:np.float32 = np.inf
+    tof_rc_obstacle_dist:np.float32 = np.inf
+    tof_rl_obstacle_dist:np.float32 = np.inf
+    tof_rr_obstacle_dist:np.float32 = np.inf
     # tof_fc_obstacle_angle:np.float32 = 0 #TODO: do we need the angle?
 
     # Get TOF sensor data for obstacle detection
@@ -1610,6 +1653,12 @@ class NavNode(Node):
             self.tof_fl_obstacle_dist = dist_min
         if tof == "tof_fr" :
             self.tof_fr_obstacle_dist = dist_min
+        if tof == "tof_rc" :
+            self.tof_rc_obstacle_dist = dist_min
+        if tof == "tof_rl" :
+            self.tof_rl_obstacle_dist = dist_min
+        if tof == "tof_rr" :
+            self.tof_rr_obstacle_dist = dist_min
 
 
     # Cone distance and angle relative to front TOF sensors
