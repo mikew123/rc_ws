@@ -167,10 +167,13 @@ private:
         line.pop_back();
       }
       if (!line.empty()) {
+      // RCLCPP_INFO(get_logger(), "process_complete_lines: %s",
+      //   line.c_str());
         try {
           process_serial_packet(json::parse(line));
-        } catch (const json::exception &) {
-          // Ignore non-JSON serial lines, matching the Python node behavior.
+        } catch (const json::exception & error) {
+          RCLCPP_WARN(get_logger(), "Invalid wheel controller JSON: %s (%s)",
+            line.c_str(), error.what());
         }
       }
     }
@@ -181,17 +184,21 @@ private:
 
   void process_serial_packet(const json & packet)
   {
+    // RCLCPP_INFO(get_logger(), "process_serial_packet: %s",
+    //   packet.dump().c_str());
     if (packet.contains("odom")) {
       process_wheel_odom(packet.at("odom"));
     }
     if (packet.contains("status")) {
-      process_engine_status(packet.at("status").get<std::string>());
+      process_engine_status(packet.at("status"));
     }
   }
 
-  void process_engine_status(const std::string & status)
+  void process_engine_status(const json & status)
   {
-    if (status != last_engine_status_) {
+    // RCLCPP_INFO(get_logger(), "process_engine_status: %s",
+    //   status.dump().c_str());
+    if (1){ //status != last_engine_status_) {
       publish_json(json{{"engine", {{"status", status}}}});
       last_engine_status_ = status;
     }
@@ -207,6 +214,7 @@ private:
     last_stamp_ms_ = stamp_ms;
     const int32_t delta_enc = enc - last_enc_;
     last_enc_ = enc;
+
     if (dt > 0.1 || dt <= 0.0) {
       return;
     }
@@ -332,7 +340,7 @@ private:
   double x_, y_, yaw_, last_steering_angle_;
   int64_t teleop_until_;
   bool kill_switch_, kill_switch_changed_;
-  std::string last_engine_status_;
+  json last_engine_status_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr json_msg_publisher_;
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr json_msg_subscription_;
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr wheel_odom_publisher_;

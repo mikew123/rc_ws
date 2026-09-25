@@ -133,12 +133,12 @@ class ControllerNode(Node):
                 self.tts("Kill switch is not active - allow movement again")
 
     def processEngineStatus(self,status:String) -> None :
-            # self.get_logger().info(f"processEngineStatus: {status=}")
-            if "mode" in status : self.processMode(status["mode"])
-            if "rca"  in status : self.processRca(status["rca"])
-            if "kse"  in status : self.processKse(status["kse"])
-            if "ksl"  in status : self.processKsl(status["ksl"])
-            if "vbat" in status : self.processVbat(status["vbat"])
+        # self.get_logger().info(f"processEngineStatus: {status=}")
+        if "mode" in status : self.processMode(status["mode"])
+        if "rca"  in status : self.processRca(status["rca"])
+        if "kse"  in status : self.processKse(status["kse"])
+        if "ksl"  in status : self.processKsl(status["ksl"])
+        if "vbat" in status : self.processVbat(status["vbat"])
 
     # timer for battery report when not LOW
     def processVbat(self, vbat) -> None :

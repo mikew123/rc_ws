@@ -1411,15 +1411,16 @@ class NavNode(Node):
                 # TODO: kill switch
                 # backup a bit manually to get out of collision stop polygon
                 msg = Twist()
-                dist = self.cd_man_backup_dist
+                dist = 2.0 #self.cd_man_backup_dist
                 vel = self.cd_man_backup_vel
-                t = 1.5*dist/vel
+                # t = 1.5*dist/vel
+                t = dist/vel
                 if (cur_time - self.cd_sub_timer) < t :
                     # manual back up to avoid collision detect
                     msg.linear.x = -vel 
                 else :
                     msg.linear.x = 0.0 # stop
-                    self.cd_sub_state = 2
+                    self.cd_sub_state = 3 #2
                 self.cmd_vel_publisher.publish(msg)
 
         elif self.cd_sub_state == 2 :
