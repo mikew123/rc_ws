@@ -1348,10 +1348,10 @@ class NavNode(Node):
             # msg.angular.z =  (a/0.393)*msg.linear.x #self.cd_touch_ang_vel
             msg.angular.z =  (8*y)*msg.linear.x
             # steer away from obstacle detected using TOF sensors
-            if fl_ob_dist < 0.2 :
-                msg.angular.z += 4*(fl_ob_dist - 0.2) * msg.linear.x
-            if fr_ob_dist < 0.2 :
-                msg.angular.z -= 4*(fr_ob_dist - 0.2) * msg.linear.x
+            if (fl_ob_dist < 0.2) and (fl_ob_dist > 2*fc_ob_dist) :
+                msg.angular.z -= 4*(0.2 - fl_ob_dist) * msg.linear.x
+            if (fr_ob_dist < 0.2) and (fr_ob_dist > 2*fc_ob_dist) :
+                msg.angular.z += 4*(0.2 - fr_ob_dist) * msg.linear.x
         else : 
             self.get_logger().info(f"{func} touched {d=:.3f} {d_tof=:.3f} {d_tof=:.3f} {a=:.3f} {x=:.3f} {y=:.3f} {fc_ob_dist=:.3f} {fl_ob_dist=:.3f} {fr_ob_dist=:.3f} {state=}")
             self.tts("The cone was touched")
