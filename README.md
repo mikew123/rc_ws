@@ -158,17 +158,17 @@ The modules on the front from picture top to bottom are: powered USB hub, OAK-D 
 The modules in the center from picture top to bottom are: two 5V regulators, two power source switches (switches from  battery voltage, 9V, to external power, 12V), Wifi router.<br>
 The modules on the rear from picture top to bottom are: Pi5 computer, IMU and GPS RP2040 module and devices, Time of Flight RP2040 module. The foil is to help protect the GPS signal from the electronics and engine noise. The TOF modules has cables going to the TOF sensors mounted on the front and rear of the Jeep body.<br>
 There is a cable going to the Lidar sensor mounted on the hood.<br>
-<img src="support\rc25_cabin_electronics.jpeg"> <br>
+<img src="support/rc25_cabin_electronics.jpeg"> <br>
 <br>
 This picture shows the camera fan mounted on a vent assembly that pulls the air from outside to cool the camera. There is a screen mesh under the vent to filter out grass and other dirt from outside.<br>
-<img src="support\rc25_camera_fan.jpeg"> <br>
+<img src="support/rc25_camera_fan.jpeg"> <br>
 <br>
 This is a picture of the Jeep front grill and hood. The three TOF sensors are mounted on the front grill in a module to protect them from the elements. There is a polycarbonate "window" for each sensor which is currently secured with blue tape. There is a cable that goes through the grill to the TOF RP2040 module in the jeep cabin. <br>
 The Lidar mounted on the Jeep roof is also visible in this picture. <br>
-<img src="support\rc25_front_grill.jpeg"> <br>
+<img src="support/rc25_front_grill.jpeg"> <br>
 <br>
 This is a picture of the Jeep rear panel. It has three TOF sensors mounted like on the front grill and a power/reset button and a jack for external 12V power. The external power is used during development to reduce dependancy on the batteries.<br>
-<img src="support\rc25_rear_panel.jpeg"> <br>
+<img src="support/rc25_rear_panel.jpeg"> <br>
 <br>
 
 # 2025 Development rig
