@@ -145,7 +145,33 @@ This module has both a GPS receiver and a Compass. I could never get the compass
 Amazon Matek M10Q-5883 GNSS Compass Module GNSS Ublox SAM-M10Q QMC5883L Magnetic Compass for RC Drone FPV Racing.<br>
 <https://www.amazon.com/M10Q-5883-Compass-SAM-M10Q-QMC5883L-Magnetic/dp/B0BZ7VJKHV>
 
-# Development rig
+
+# 2026 Electronics in Jeep cabin
+The sensors and computer etc. were installed in the Jeep cabin for protection from outside dirt and rain etc. <br>
+<br>
+This picture shows the connections from the cabin to the under the hood electronics.<br> 
+There are 3 cables to the engine controller box which has a module with RP2040 and battery voltage regulators and RC control signal multiplexor circuits. There are two power cables and a USB cable. Also note the Ethernet cable connector on the mounting board at the back, it is weather tight when closed. The hole in the wood panel towards the front is for the camera cooling fan.<br>
+<img src="support/rc25_under_hood.jpeg"> <br>
+<br>
+This picture is of the electronics etc mounted on the board which will be inside the cabin and attaches to the Jeep body.<br>
+The modules on the front from picture top to bottom are: powered USB hub, OAK-D Lite camera, USB speaker, and the camera fan.<br>
+The modules in the center from picture top to bottom are: two 5V regulators, two power source switches (switches from  battery voltage, 9V, to external power, 12V), Wifi router.<br>
+The modules on the rear from picture top to bottom are: Pi5 computer, IMU and GPS RP2040 module and devices, Time of Flight RP2040 module. The foil is to help protect the GPS signal from the electronics and engine noise. The TOF modules has cables going to the TOF sensors mounted on the front and rear of the Jeep body.<br>
+There is a cable going to the Lidar sensor mounted on the hood.<br>
+<img src="support\rc25_cabin_electronics.jpeg"> <br>
+<br>
+This picture shows the camera fan mounted on a vent assembly that pulls the air from outside to cool the camera. There is a screen mesh under the vent to filter out grass and other dirt from outside.<br>
+<img src="support\rc25_camera_fan.jpeg"> <br>
+<br>
+This is a picture of the Jeep front grill and hood. The three TOF sensors are mounted on the front grill in a module to protect them from the elements. There is a polycarbonate "window" for each sensor which is currently secured with blue tape. There is a cable that goes through the grill to the TOF RP2040 module in the jeep cabin. <br>
+The Lidar mounted on the Jeep roof is also visible in this picture. <br>
+<img src="support\rc25_front_grill.jpeg"> <br>
+<br>
+This is a picture of the Jeep rear panel. It has three TOF sensors mounted like on the front grill and a power/reset button and a jack for external 12V power. The external power is used during development to reduce dependancy on the batteries.<br>
+<img src="support\rc25_rear_panel.jpeg"> <br>
+<br>
+
+# 2025 Development rig
 For 2025 the development was performed using the parts mounted on a board which was mounted on the chassis, the components were not in the Jeep cabin but the sensors were place close to the desired final positions in the Jeep cabin.<br> 
 <img src="support/Rc25DevelopmentRig.jpg">
 
@@ -155,7 +181,7 @@ In 2026 the electronics were placed in the Jeep cabin and the only components ou
 <img src="support/Pi5wSsdAndUsbHub.jpg">
 
 
-# New electronics in engine compartment
+# Electronics in engine compartment
 A waterproof box is mounted to the rear battery holder. This box holds the DC-DC converters for the electronics in the cabin, the servo signal mux and a micro controller to manage the servo switch and send some telemetry to the computer in the cabin. The servo switch defaults to connecting the RC receiver to the motor and servos.</br>
 I needed to augment the polulu PWM switch module with analog switches for the throttle signal which had better performance using the serial protocol instead of the servo type PWM. If I did it over I would have also used analog switches for the steering and shift PWM signals.<br>
 NOTE: This photo is older and does not have the analog switches.<br>

@@ -61,5 +61,6 @@
         "variant": "cpp"
     },
     "ROS2.distro": "jazzy",
-    "cmake.sourceDirectory": "/home/mikew/rc25_ws/src/robocolumbus_interfaces"
+    "cmake.sourceDirectory": "/home/mikew/rc25_ws/src/robocolumbus_interfaces",
+    "idf.currentSetup": "c:\\Espressif\\frameworks\\esp-idf-v5.1"
 }
