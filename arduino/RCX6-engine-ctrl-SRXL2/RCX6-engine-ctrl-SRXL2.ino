@@ -563,8 +563,8 @@ bool jsonParse(const char *jsonStr) {
   // If watchdog times out then the motor stops
   if (myObject.hasOwnProperty("wd")) {
     wdTimeMsec = (int) myObject["wd"];
-    Serial.print("wdTimeMsec = ");
-    Serial.println(wdTimeMsec);
+    // Serial.print("wdTimeMsec = ");
+    // Serial.println(wdTimeMsec);
     resetWatchdogTimer();
   }
 
@@ -573,11 +573,11 @@ bool jsonParse(const char *jsonStr) {
     if (myObject.hasOwnProperty("cv")) {
       JSONVar cv;
       cv = myObject["cv"];
-      Serial.print("CmdVar = [linx=");
-      Serial.print((double)cv[0]);
-      Serial.print(", steer=");
-      Serial.print((double)cv[1]);
-      Serial.println("]");
+      // Serial.print("CmdVar = [linx=");
+      // Serial.print((double)cv[0]);
+      // Serial.print(", steer=");
+      // Serial.print((double)cv[1]);
+      // Serial.println("]");
 
       //resetPID();
 

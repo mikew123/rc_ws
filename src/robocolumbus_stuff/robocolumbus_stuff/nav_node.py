@@ -979,9 +979,9 @@ class NavNode(Node):
         """
 
         # Max distance to object to avoid/slow
-        objMax = 0.3
+        objMax = 0.50
         # Min distance to object to stop
-        objMin = 0.1
+        objMin = 0.15
 
         if lx <0 :
         # get object distances from TOF sensors
