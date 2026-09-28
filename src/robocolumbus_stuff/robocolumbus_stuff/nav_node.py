@@ -970,6 +970,70 @@ class NavNode(Node):
 
         return returnVal
 
+
+    def driveManObs(self, lx:float, az:float=0.0) -> tuple :
+        """
+        drive at speed and angle
+        Avoid obsticals
+        returns adjusted (lx, az)
+        """
+
+        # Max distance to object to avoid/slow
+        objMax = 0.3
+        # Min distance to object to stop
+        objMin = 0.1
+
+        if lx <0 :
+        # get object distances from TOF sensors
+            rc_ob_dist = self.tof_rc_obstacle_dist
+            rl_ob_dist = self.tof_rl_obstacle_dist
+            rr_ob_dist = self.tof_rr_obstacle_dist
+        else :
+            rc_ob_dist = self.tof_fc_obstacle_dist
+            rl_ob_dist = self.tof_fl_obstacle_dist
+            rr_ob_dist = self.tof_fr_obstacle_dist
+
+        # linear velocity reduces when any rear sensor detects close
+        xc = 1.0
+        xr = 1.0
+        xl = 1.0
+        # angular velocity steers away from right or left obstical detection
+        ac = 0.0
+        ar = 0.0
+        al = 0.0
+
+        if rc_ob_dist < objMin :
+            xc = 0.0
+        elif rc_ob_dist < objMax :
+            xc = 1.0 - (objMax - rc_ob_dist)/objMax
+
+        if rr_ob_dist < objMin :
+            xr = 0.0
+            ar = -1.0
+        elif rr_ob_dist < objMax :
+            xr = 1.0 - (objMax - rr_ob_dist)/objMax
+            ar = -0.5
+
+        if rl_ob_dist < objMin :
+            xl = 0.0
+            al = +1.0
+        elif rl_ob_dist < objMax :
+            xl = 1.0 - (objMax - rr_ob_dist)/objMax
+            al = +0.5
+
+        # add all angular velocities to maximally avoid the obstical
+        # NOTE: if L and R are equal they cancel out and no rotation
+        # select the minimum linear velocity adjustment
+        if lx < 0 :
+            az += ac + ar + al
+            lx *= np.min((xc,xr,xl))
+        else :
+            az -= ac + ar + al
+            lx *= np.min((xc,xr,xl))
+
+        return (lx, az)
+
+
     def drivePattern(self, init:bool, numMoves:int=0, speed:float=0.5, driveT:float=2.0, pauseT:float=0.5) -> bool :
         '''
         Drive in a "star" like pattern fwd-left/rev-right or similar
@@ -1007,8 +1071,9 @@ class NavNode(Node):
             if stateChange==True :
                 self.dpStopTime = time.monotonic() + math.fabs(driveT)
 
-            msg.linear.x  = speed
-            msg.angular.z = -2*speed
+            # msg.linear.x  = speed
+            # msg.angular.z = -2*speed
+            (msg.linear.x, msg.angular.z) = self.driveManObs(speed, -2*speed)
 
             if time.monotonic() >= self.dpStopTime :
                 self.dpPauseNextState = self.DP_REV_LEFT
@@ -1018,8 +1083,9 @@ class NavNode(Node):
             if stateChange==True :
                 self.dpStopTime = time.monotonic() + math.fabs(driveT)
 
-            msg.linear.x  = -speed
-            msg.angular.z = -2*speed
+            # msg.linear.x  = -speed
+            # msg.angular.z = -2*speed
+            (msg.linear.x, msg.angular.z) = self.driveManObs(-speed, -2*speed)
 
             if time.monotonic() >= self.dpStopTime :
                 self.dpPauseNextState = self.DP_FWD_RIGHT
