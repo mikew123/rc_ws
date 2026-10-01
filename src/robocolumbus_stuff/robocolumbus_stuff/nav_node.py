@@ -61,7 +61,7 @@ class NavNode(Node):
     tc_next_state = T_INIT_WAIT
 
     # stop when this distance from mid_link during goto wp or cone
-    sm_xy_goal_wp   = 3.0 #2.0
+    sm_xy_goal_wp   = 0.5 # 3 was set for outdoors? 3.0 #2.0
     sm_xy_goal_cone = 0.25
 
     CAL_IMU_WAIT_BUTT, CAL_IMU, CAL_IMU_DONE = range(3)
@@ -97,7 +97,7 @@ class NavNode(Node):
     cd_closer_avel = cd_closer_lvel
 
     # state=3 use /tof_fc_mid to "touch" cone using /cmd_vel
-    cd_touch_dist = 0.030
+    cd_touch_dist = 0.040
     cd_touch_lin_vel = 0.05
     cd_touch_ang_vel = cd_touch_lin_vel
 
@@ -828,7 +828,14 @@ class NavNode(Node):
                     next_state = self.T_GET_WP
 
             #TODO: timeout + kill switch
-            if self.nav.isTaskComplete() :
+
+            # Stop gotoPose and find detected cone
+            if self.wpCone and (self.cone_det_cam_true_cnt > 4) :
+                self.cancelNav2Task()
+                self.tts("Cone detected while navigating to waypoint")
+                next_state = self.T_GOTO_CONE
+
+            elif self.nav.isTaskComplete() :
                 result = self.nav.getResult()
                 if result == TaskResult.SUCCEEDED :
                     self.tts("Navigate to way point location is successfull")
@@ -837,6 +844,7 @@ class NavNode(Node):
                         next_state = self.T_GOTO_CONE
                     else :
                         # No cone is at the way point
+                        # TODO: try finding cone at waypoint again
                         next_state = self.T_GET_WP
                 else :
                     # try again
@@ -1047,11 +1055,11 @@ class NavNode(Node):
         '''
         
         # /cmd_vel message to drive robot
+        # Twist msg default is velocities = 0
         msg = Twist()
 
+        # Stop when Kill switch active 
         if self.killSw == True :
-            # Kill switch active 
-            # Twist msg default is velocities = 0
             self.cmd_vel_publisher.publish(msg)
             return False
 
@@ -1205,7 +1213,9 @@ class NavNode(Node):
         killSwitchActive:bool  = ks
         next_state:int = state
 
-        if x!=0 and y<0.10 and y>-0.10:
+        # TODO: Use cone_det_cam_true_cnt??
+        # if x!=0 and y<0.10 and y>-0.10:
+        if self.cone_det_cam_true_cnt > 4 :
             # A cone has been detected
             self.get_logger().info(f"{func} cone detected at {x=:.3f} {y=:.3f}  {state=} {killSwitchActive=}")
             #stop movement
@@ -1407,19 +1417,21 @@ class NavNode(Node):
             self.get_logger().info(f"{func} cone is too far {d=:.3f} {d_tof=:.3f} {a=:.3f} {x=:.3f} {y=:.3f} {state=}")
             self.tts(f"State 3: The cone is too far at distance {d:.1f} meters")
             next_state = 0 # restart by looking for the cone
-        elif (x > self.cd_touch_dist) and (d_tof > self.cd_touch_dist) :
+        elif d_tof > self.cd_touch_dist :
             self.get_logger().info(f"{func} approaching cone to touch {d=:.3f} {d_tof=:.3f} {a=:.3f} {x=:.3f} {y=:.3f} {fc_ob_dist=:.3f} {fl_ob_dist=:.3f} {fr_ob_dist=:.3f} {state=}")
             msg.linear.x = (x/0.2)*self.cd_touch_lin_vel + 0.010
             # turn towards cone center
             # msg.angular.z =  (a/0.393)*msg.linear.x #self.cd_touch_ang_vel
             msg.angular.z =  (8*y)*msg.linear.x
-            # steer away from obstacle detected using TOF sensors
-            if (fl_ob_dist < 0.2) and (fl_ob_dist > 2*fc_ob_dist) :
-                msg.angular.z -= 4*(0.2 - fl_ob_dist) * msg.linear.x
-            if (fr_ob_dist < 0.2) and (fr_ob_dist > 2*fc_ob_dist) :
-                msg.angular.z += 4*(0.2 - fr_ob_dist) * msg.linear.x
+
+            # # Commented out, it seemed to cause an drive angle offset
+            # # steer away from obstacle detected using TOF sensors
+            # if (fl_ob_dist < 0.2) and (fl_ob_dist > 2*fc_ob_dist) :
+            #     msg.angular.z -= 4*(0.2 - fl_ob_dist) * msg.linear.x
+            # if (fr_ob_dist < 0.2) and (fr_ob_dist > 2*fc_ob_dist) :
+            #     msg.angular.z += 4*(0.2 - fr_ob_dist) * msg.linear.x
         else : 
-            self.get_logger().info(f"{func} touched {d=:.3f} {d_tof=:.3f} {d_tof=:.3f} {a=:.3f} {x=:.3f} {y=:.3f} {fc_ob_dist=:.3f} {fl_ob_dist=:.3f} {fr_ob_dist=:.3f} {state=}")
+            self.get_logger().info(f"{func} touched {d=:.3f} {d_tof=:.3f} {a=:.3f} {x=:.3f} {y=:.3f} {fc_ob_dist=:.3f} {fl_ob_dist=:.3f} {fr_ob_dist=:.3f} {state=}")
             self.tts("The cone was touched")
             next_state = 4
 
@@ -1645,6 +1657,11 @@ class NavNode(Node):
 
 
     # Cone detection from camera AI relative to camera "oak-d_frame"
+
+    # TODO: globals to be moved to begining of file
+    cone_det_cam_true_cnt:int = 0
+    cone_det_cam_false_cnt:int = 0
+
     def cone_point_cam_subscription_callback(self, msg: PointStamped) -> None:
         # if msg.point.x == 0 : self.get_logger().info(f"{msg=}")
         x = msg.point.x
@@ -1661,6 +1678,14 @@ class NavNode(Node):
         self.cone_at_a_cam = a
         self.cone_det_time_cam = t
 
+        # count consecutive cone detections
+        if self.cone_at_d_cam > 0 :
+            self.cone_det_cam_true_cnt += 1
+            self.cone_det_cam_false_cnt = 0
+        else :
+            self.cone_det_cam_true_cnt = 0
+            self.cone_det_cam_false_cnt +=1
+            
         # save last valid cone detection y
         if x>0.0 :
             self.cone_at_y_cam_last_det = y
@@ -1668,6 +1693,11 @@ class NavNode(Node):
         # self.get_logger().info(f"cone_point_cam_callback: {x=:.3f} {y=:.3f} {a=:.3f} {d=:.3f} ")
 
     # Cone detection from lidar scan relative to lidar "lidar_link"
+
+    # TODO: globals to be moved to begining of file
+    cone_det_lidar_true_cnt:int = 0
+    cone_det_lidar_false_cnt:int = 0
+
     def cone_point_lidar_subscription_callback(self, msg: PointStamped) -> None:
 
         # if msg.point.x == 0 : self.get_logger().info(f"{msg=}")
@@ -1685,8 +1715,17 @@ class NavNode(Node):
         self.cone_at_a_lidar = a
         self.cone_det_time_lidar = t
 
+        # count consecutive cone detections
+        if self.cone_at_d_lidar > 0 :
+            self.cone_det_lidar_true_cnt += 1
+            self.cone_det_lidar_false_cnt = 0
+        else :
+            self.cone_det_lidar_true_cnt   = 0
+            self.cone_det_lidar_false_cnt += 1
+
         # self.get_logger().info(f"cone_point_lidar_callback: {x=:.3f} {y=:.3f} {a=:.3f} {d=:.3f} ")
 
+    # TODO: globals to be moved to begining of file
     tof_dist_obstacle_max = 0.300
     tof_fc_obstacle_dist:np.float32 = np.inf
     tof_fl_obstacle_dist:np.float32 = np.inf

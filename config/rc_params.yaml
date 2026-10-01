@@ -196,7 +196,7 @@ local_costmap:
           data_type: "PointCloud2"
           marking: True
           clearing: True
-          min_obstacle_height: 0.2
+          min_obstacle_height: 0.25
           max_obstacle_height: 1.0
           obstacle_range: 2.0
           raytrace_range: 2.5
@@ -207,7 +207,7 @@ local_costmap:
           data_type: "PointCloud2"
           marking: True
           clearing: True
-          min_obstacle_height: 0.2
+          min_obstacle_height: 0.25
           max_obstacle_height: 1.0
           obstacle_range: 2.0
           raytrace_range: 2.5
@@ -218,7 +218,7 @@ local_costmap:
           data_type: "PointCloud2"
           marking: True
           clearing: True
-          min_obstacle_height: 0.2
+          min_obstacle_height: 0.25
           max_obstacle_height: 1.0
           obstacle_range: 2.0
           raytrace_range: 2.5
@@ -229,7 +229,7 @@ local_costmap:
           data_type: "PointCloud2"
           marking: True
           clearing: True
-          min_obstacle_height: 0.2
+          min_obstacle_height: 0.25
           max_obstacle_height: 1.0
           obstacle_range: 2.0
           raytrace_range: 2.5
@@ -240,7 +240,7 @@ local_costmap:
           data_type: "PointCloud2"
           marking: True
           clearing: True
-          min_obstacle_height: 0.2
+          min_obstacle_height: 0.25
           max_obstacle_height: 1.0
           obstacle_range: 2.0
           raytrace_range: 2.5
@@ -251,7 +251,7 @@ local_costmap:
           data_type: "PointCloud2"
           marking: True
           clearing: True
-          min_obstacle_height: 0.2
+          min_obstacle_height: 0.25
           max_obstacle_height: 1.0
           obstacle_range: 2.0
           raytrace_range: 2.5
@@ -306,7 +306,7 @@ global_costmap:
           data_type: "PointCloud2"
           marking: True
           clearing: True
-          min_obstacle_height: 0.2
+          min_obstacle_height: 0.25
           max_obstacle_height: 1.0
           obstacle_range: 2.0
           raytrace_range: 2.5
@@ -317,7 +317,7 @@ global_costmap:
           data_type: "PointCloud2"
           marking: True
           clearing: True
-          min_obstacle_height: 0.2
+          min_obstacle_height: 0.25
           max_obstacle_height: 1.0
           obstacle_range: 2.0
           raytrace_range: 2.5
@@ -328,7 +328,7 @@ global_costmap:
           data_type: "PointCloud2"
           marking: True
           clearing: True
-          min_obstacle_height: 0.2
+          min_obstacle_height: 0.25
           max_obstacle_height: 1.0
           obstacle_range: 2.0
           raytrace_range: 2.5
@@ -547,40 +547,40 @@ collision_monitor:
       visualize: True
       polygon_pub_topic: "polygon_slowdown"
     #observation_sources: ["scan"]
-    observation_sources: ["scan", "tof_fc", "tof_fl", "tof_fr"]
-    # observation_sources: ["scan", "tof_rc", "tof_rl", "tof_rr", "tof_fc", "tof_fl", "tof_fr"]
+    #observation_sources: ["scan", "tof_fc", "tof_fl", "tof_fr"]
+    observation_sources: ["scan", "tof_rc", "tof_rl", "tof_rr", "tof_fc", "tof_fl", "tof_fr"]
     scan:
       type: "scan"
       topic: "scan"
-    # tof_rc:
-    #   type: "pointcloud"
-    #   topic: "/tof_rc"
-    #   min_height: 0.15
-    #   max_height: 0.5
-    # tof_rl:
-    #   type: "pointcloud"
-    #   topic: "/tof_rl"
-    #   min_height: 0.15
-    #   max_height: 0.5
-    # tof_rr:
-    #   type: "pointcloud"
-    #   topic: "/tof_rr"
-    #   min_height: 0.15
-    #   max_height: 0.5
+    tof_rc:
+      type: "pointcloud"
+      topic: "/tof_rc"
+      min_height: 0.20
+      max_height: 0.5
+    tof_rl:
+      type: "pointcloud"
+      topic: "/tof_rl"
+      min_height: 0.20
+      max_height: 0.5
+    tof_rr:
+      type: "pointcloud"
+      topic: "/tof_rr"
+      min_height: 0.20
+      max_height: 0.5
     tof_fc:
       type: "pointcloud"
       topic: "/tof_fc"
-      min_height: 0.15
+      min_height: 0.20
       max_height: 0.5
     tof_fl:
       type: "pointcloud"
       topic: "/tof_fl"
-      min_height: 0.15
+      min_height: 0.20
       max_height: 0.5
     tof_fr:
       type: "pointcloud"
       topic: "/tof_fr"
-      min_height: 0.15
+      min_height: 0.20
       max_height: 0.5
 
 docking_server:
