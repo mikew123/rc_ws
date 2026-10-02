@@ -169,7 +169,22 @@ local_costmap:
       # robot_radius: 0.500 #0.350
 
       # plugins: ["obstacle_layer", "inflation_layer", "voxel_layer"]
+      # plugins: ["obstacle_layer", "inflation_layer", "range_layer"]
       plugins: ["obstacle_layer", "inflation_layer"]
+
+      # Current "range" sensor uses lidar /scan, this does not make difference
+      # range_layer:
+      #   plugin: "nav2_costmap_2d::RangeSensorLayer"
+      #   enabled: true
+      #   topics: ["/range_r", "/range_l"]
+      #   phi: 0.785 # 45 deg
+      #   inflate_cone: 1.1
+      #   clear_threshold: 0.25
+      #   mark_threshold: 0.75
+      #   no_readings_timeout: 2.0
+      #   clear_on_max_reading: false
+      #   input_sensor_type: "VARIABLE"
+
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: True
@@ -256,6 +271,7 @@ local_costmap:
           obstacle_range: 2.0
           raytrace_range: 2.5
           inf_is_valid: false
+
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         enabled: true

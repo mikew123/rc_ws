@@ -28,6 +28,7 @@ from geometry_msgs.msg import PointStamped, PoseStamped, PoseWithCovarianceStamp
 from geometry_msgs.msg import Twist, Pose
 from geographic_msgs.msg import GeoPose
 from sensor_msgs.msg import NavSatFix, NavSatStatus
+from sensor_msgs.msg import Range
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
 
 from tf2_ros import LookupException, ConnectivityException, ExtrapolationException
@@ -108,8 +109,8 @@ class NavNode(Node):
     # manual backup then nav2 backup
     cd_backup_dist = 1.5
     cd_backup_vel = 0.5
-    cd_man_backup_dist = 0.5
-    cd_man_backup_vel = 0.25
+    # cd_man_backup_dist = 0.5
+    # cd_man_backup_vel = 0.25
 
     # # Field of view pointing forward from Lidar 36 degree scan data 
     tof_fc_dist_max = 1.5
@@ -277,6 +278,11 @@ class NavNode(Node):
                                             , self.tof_fc_mid_subscription_callback, 10)
         self.tof_dist_subscription = self.create_subscription(TofDist, '/tof_dist'
                                             , self.tof_dist_subscription_callback, 10)
+        self.range_r_subscription = self.create_subscription(Range, '/range_r'
+                                            , self.range_r_subscription_callback, 10)
+        self.range_l_subscription = self.create_subscription(Range, '/range_l'
+                                            , self.range_l_subscription_callback, 10)
+
         self.gps_nav_subscription = self.create_subscription(NavSatFix, '/gps_nav'
                                             , self.gps_nav_subscription_callback, 10)
 
@@ -986,58 +992,88 @@ class NavNode(Node):
         returns adjusted (lx, az)
         """
 
-        # Max distance to object to avoid/slow
-        objMax = 0.50
-        # Min distance to object to stop
-        objMin = 0.15
+        # Max distance to object from TOF sensors to avoid/slow
+        tofObjMax = 0.50
+        # Min distance to object from TOF sensors to stop
+        tofObjMin = 0.20
+        # Max distance to object from Range sensors to avoid/slow
+        rngObjMax = 0.50
+        # Min distance to object from Range sensors to stop
+        rngObjMin = 0.20
+
+        rngr_ob_dist = self.range_r_obstacle_dist
+        rngl_ob_dist = self.range_l_obstacle_dist
 
         if lx <0 :
         # get object distances from TOF sensors
-            rc_ob_dist = self.tof_rc_obstacle_dist
-            rl_ob_dist = self.tof_rl_obstacle_dist
-            rr_ob_dist = self.tof_rr_obstacle_dist
+            c_ob_dist = self.tof_rc_obstacle_dist
+            l_ob_dist = self.tof_rl_obstacle_dist
+            r_ob_dist = self.tof_rr_obstacle_dist
         else :
-            rc_ob_dist = self.tof_fc_obstacle_dist
-            rl_ob_dist = self.tof_fl_obstacle_dist
-            rr_ob_dist = self.tof_fr_obstacle_dist
+            c_ob_dist = self.tof_fc_obstacle_dist
+            l_ob_dist = self.tof_fl_obstacle_dist
+            r_ob_dist = self.tof_fr_obstacle_dist
 
         # linear velocity reduces when any rear sensor detects close
         xc = 1.0
         xr = 1.0
         xl = 1.0
+        xrr = 1.0
+        xrl = 1.0
+
         # angular velocity steers away from right or left obstical detection
         ac = 0.0
         ar = 0.0
         al = 0.0
+        arr = 0.0
+        arl = 0.0
 
-        if rc_ob_dist < objMin :
+        if c_ob_dist < tofObjMin :
             xc = 0.0
-        elif rc_ob_dist < objMax :
-            xc = 1.0 - (objMax - rc_ob_dist)/objMax
+        elif c_ob_dist < tofObjMax :
+            xc = 1.0 - (tofObjMax - c_ob_dist)/tofObjMax
 
-        if rr_ob_dist < objMin :
+        if r_ob_dist < tofObjMin :
             xr = 0.0
             ar = -1.0
-        elif rr_ob_dist < objMax :
-            xr = 1.0 - (objMax - rr_ob_dist)/objMax
+        elif r_ob_dist < tofObjMax :
+            xr = 1.0 - (tofObjMax - r_ob_dist)/tofObjMax
             ar = -0.5
 
-        if rl_ob_dist < objMin :
+        if l_ob_dist < tofObjMin :
             xl = 0.0
             al = +1.0
-        elif rl_ob_dist < objMax :
-            xl = 1.0 - (objMax - rr_ob_dist)/objMax
+        elif l_ob_dist < tofObjMax :
+            xl = 1.0 - (tofObjMax - r_ob_dist)/tofObjMax
             al = +0.5
+
+        if rngr_ob_dist < rngObjMin :
+            xrr = 0.0
+            arr = -1.0
+        elif rngr_ob_dist < rngObjMax :
+            xrr = 1.0 - (rngObjMax - rngr_ob_dist)/rngObjMax
+            arr = -0.5
+
+        if rngl_ob_dist < rngObjMin :
+            xrl = 0.0
+            arl = +1.0
+        elif rngl_ob_dist < rngObjMax :
+            xrl = 1.0 - (rngObjMax - r_ob_dist)/rngObjMax
+            arl = +0.5
 
         # add all angular velocities to maximally avoid the obstical
         # NOTE: if L and R are equal they cancel out and no rotation
         # select the minimum linear velocity adjustment
         if lx < 0 :
-            az += ac + ar + al
-            lx *= np.min((xc,xr,xl))
+            az += 2*(ac + ar + al - arr - arl)
+            lx *= np.min((xc,xr,xl,xrr,xrl))
         else :
-            az -= ac + ar + al
-            lx *= np.min((xc,xr,xl))
+            az -= 2*(ac + ar + al - arr - arl)
+            lx *= np.min((xc,xr,xl,xrr,xrl))
+
+        if lx == 0.0 :
+            self.get_logger().info(f"driveManObs: Stopped {lx=} {az=}")
+            self.tts(f"Stopped while manual driving")
 
         return (lx, az)
 
@@ -1466,22 +1502,13 @@ class NavNode(Node):
             self.tts("Backup")
             self.cd_sub_state = 0
 
-        rc_ob_dist = self.tof_rc_obstacle_dist
-        rl_ob_dist = self.tof_rl_obstacle_dist
-        rr_ob_dist = self.tof_rr_obstacle_dist
-
         cur_time = time.time_ns()*1e-9            
         killSwitchActive:bool = ks
-        killSwitchChange = ksc
+        # killSwitchChange = ksc
         next_state = state
         dist = self.cd_backup_dist
         vel = self.cd_backup_vel
         t = 1.5*self.cd_backup_dist/self.cd_backup_vel
-
-        # if killSwitchActive :
-        #     # restart timer
-        #     # TODO: Should timer be frozen?
-        #     self.cd_timer = time.time_ns()*1e-9
 
         if self.cd_sub_state == 0 :
             if not killSwitchActive :
@@ -1490,84 +1517,25 @@ class NavNode(Node):
                 self.cd_sub_state = 1
 
         elif self.cd_sub_state == 1 :
-                # TODO: kill switch
-                # backup a bit manually to get out of collision stop polygon
-                msg = Twist()
-                dist = 2.0 #self.cd_man_backup_dist
-                vel = self.cd_man_backup_vel
-                # t = 1.5*dist/vel
-                t = dist/vel
-                if (cur_time - self.cd_sub_timer) < t :
-                    # manual back up with collision detect and avoid
-
-                    # linear velocity reduces when any rear sensor detects close
-                    x = vel 
-                    xc = 1.0
-                    xr = 1.0
-                    xl = 1.0
-                    # angular velocity steers away from right or left obstical detection
-                    a = 0.0
-                    ac = 0.0
-                    ar = 0.0
-                    al = 0.0
-
-                    if rc_ob_dist < 0.1 :
-                        xc = 0.0
-                    elif rc_ob_dist < 0.3 :
-                        xc = 1.0 - (0.3 - rc_ob_dist)/0.3
-                    if rr_ob_dist < 0.1 :
-                        xr = 0.0
-                        ar = -1.0
-                    elif rr_ob_dist < 0.3 :
-                        xr = 1.0 - (0.3 - rr_ob_dist)/0.3
-                        ar = -0.5
-                    if rl_ob_dist < 0.1 :
-                        xl = 0.0
-                        al = +1.0
-                    elif rl_ob_dist < 0.3 :
-                        xl = 1.0 - (0.3 - rr_ob_dist)/0.3
-                        al = +0.5
-                    # add all angular velocities to maximally avoid the obstical
-                    # NOTE: if L and R are equal they cancel out and no rotation
-                    a += ac + ar + al
-                    msg.angular.z = a
-
-                    # select the minimum linear velocity adjustment
-                    x *= np.min((xc,xr,xl))
-                    msg.linear.x = -x 
-                else :
-                    msg.linear.x = 0.0 # stop
-                    msg.angular.z = 0.0
-                    self.cd_sub_state = 3 #2
-                self.cmd_vel_publisher.publish(msg)
-
-        elif self.cd_sub_state == 2 :
-            dist = self.cd_backup_dist
+            # TODO: kill switch
+            msg = Twist()
+            dist = 2.0
             vel = self.cd_backup_vel
-            t = int(1.5*dist/vel + 0.5)
-            if not killSwitchActive :
-                # issue a backup navigation command with obstical avoidance
-                self.nav.backup(backup_dist=dist, backup_speed=vel
-                    , time_allowance=t) # non-blocking
-                self.cd_sub_timer = cur_time
-                self.cd_sub_state = 3
+            t = dist/vel
 
-        elif self.cd_sub_state == 3 :
-            dist = self.cd_backup_dist
-            vel = self.cd_backup_vel
-            t = 1.5*dist/vel
-            if killSwitchActive :
-                # Cancel goal and wait when kill switch status changes to active
-                if killSwitchChange :
-                    # self.nav.cancelTask()
-                    self.cd_sub_state = 2
-            else : # Execute when kill switch is not active
-                # check for nav backup is complete or navigate time finished
-                if (cur_time - self.cd_sub_timer) < t :
-                    if self.nav.isTaskComplete() :
-                        next_state = 6
-                else :
+            if (cur_time - self.cd_sub_timer) < t :
+                x,a = self.driveManObs(-vel)
+                msg.linear.x = x
+                msg.angular.z = a
+                if x==0.0 :
                     next_state = 6
+
+            else :
+                msg.linear.x = 0.0 # stop
+                msg.angular.z = 0.0
+                next_state = 6
+
+            self.cmd_vel_publisher.publish(msg)
 
         return next_state
 
@@ -1734,6 +1702,16 @@ class NavNode(Node):
     tof_rl_obstacle_dist:np.float32 = np.inf
     tof_rr_obstacle_dist:np.float32 = np.inf
     # tof_fc_obstacle_angle:np.float32 = 0 #TODO: do we need the angle?
+    range_r_obstacle_dist:np.float32 = np.math.inf
+    range_l_obstacle_dist:np.float32 = np.math.inf
+
+    # Get right range sensor
+    def range_r_subscription_callback(self, msg) -> None :
+        range_r_obstacle_dist = msg.range
+
+    # Get left range sensor
+    def range_l_subscription_callback(self, msg) -> None :
+        range_l_obstacle_dist = msg.range
 
     # Get TOF sensor data for obstacle detection
     def tof_dist_subscription_callback(self,msg:TofDist) -> None :

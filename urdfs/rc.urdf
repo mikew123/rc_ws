@@ -272,6 +272,38 @@
     </visual>
   </link>
 
+  <!-- Right range sensor are at the Lidar position at -42.5 angle = FOV 45-->
+  <joint name="range_r_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="range_r_link"/>
+    <origin xyz="0.180 0 0.300" rpy="0 0 -1.571"/>
+  </joint>
+  <link name="range_r_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder length="0.030" radius="0.020"/>
+      </geometry>
+      <material name="red"/>
+    </visual>
+  </link>
+
+  <!-- Left range sensor are at the Lidar position at 42.5 angle = FOV 45-->
+  <joint name="range_l_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="range_l_link"/>
+    <origin xyz="0.180 0 0.300" rpy="0 0 1.571"/>
+  </joint>
+  <link name="range_l_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder length="0.030" radius="0.020"/>
+      </geometry>
+      <material name="red"/>
+    </visual>
+  </link>
+
 
  <!--
   <joint name="wheel_left_joint" type="continuous">

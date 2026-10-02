@@ -18,7 +18,7 @@ import numpy as np
 from rclpy.node import Node
 from rclpy.executors import MultiThreadedExecutor
 
-from sensor_msgs.msg import LaserScan
+from sensor_msgs.msg import LaserScan, Range
 from sensor_msgs.msg import PointCloud2, PointField
 from std_msgs.msg import Header
 from std_msgs.msg import String
@@ -56,6 +56,10 @@ class PcdNode(Node):
         self.tof_fc_mid_publisher = self.create_publisher(Float32X8, 'tof_fc_mid', 10) 
 
         self.combined_pcd_publisher = self.create_publisher(PointCloud2, "combined_pcd", 10)
+
+        # publish L&R ranges (currently using Lidar data)
+        self.range_r_publisher = self.create_publisher(Range, 'range_r', 10)
+        self.range_l_publisher = self.create_publisher(Range, 'range_l', 10)
 
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
@@ -138,6 +142,7 @@ class PcdNode(Node):
         by combining the 6 TOF pointclouds with the Lidar data
         adjust all xyz distances relative to base_footprint which is at z=0
         use frame xyz offsets and rpt angles to determine distances
+        Also publish Left and Right range sensor messages using the Lidar data
         """
         ranges = np.asarray(msg.ranges, dtype=np.float32)
         angles = (np.float32(msg.angle_min)
@@ -160,17 +165,6 @@ class PcdNode(Node):
         fields = [PointField(name=name, offset=index * itemsize,
                              datatype=PointField.FLOAT32, count=1)
                   for index, name in enumerate(("x", "y", "z"))]
-        
-        # lidar_pcd = PointCloud2(
-        #     header=msg.header,
-        #     height=1,
-        #     width=points.shape[0],
-        #     is_dense=True,
-        #     is_bigendian=False,
-        #     fields=fields,
-        #     point_step=points.strides[0],
-        #     row_step=points.nbytes,
-        #     data=points.tobytes())
 
         # Consume each TOF cloud at most once. The lidar scan supplies the
         # timestamp for the combined cloud.
@@ -207,6 +201,53 @@ class PcdNode(Node):
 
         self.combined_pcd_publisher.publish(combined_pcd)
 
+        # Publish left and right range sensor data using Lidar /scan
+        # The FOV is 45 deg from 20 to 65 on each side
+        # The range distance is the minimum distance in the FOV
+        # use the Lidar timestamp and frame for the rangesrange_fov = 45.0
+        range_fov = 45.0 # degrees
+        scan_ranges = np.asarray(msg.ranges, dtype=np.float32)
+        scan_angles = (np.float32(msg.angle_min)
+                       + np.arange(scan_ranges.size, dtype=np.float32)
+                       * np.float32(msg.angle_increment))
+
+        valid = (
+            np.isfinite(scan_ranges)
+            & (scan_ranges >= np.float32(msg.range_min))
+            & (scan_ranges <= np.float32(msg.range_max))
+        )
+        scan_ranges = scan_ranges[valid]
+        scan_angles = scan_angles[valid]
+
+        left_mask = ((scan_angles   >=  math.radians(90.0 - range_fov/2))
+                    & (scan_angles  <=  math.radians(90.0 + range_fov/2)))
+        right_mask = ((scan_angles  >= -math.radians(90.0 + range_fov/2))
+                     & (scan_angles <= -math.radians(90.0 - range_fov/2)))
+
+        def find_min_range(mask):
+            if not np.any(mask):
+                return msg.range_max
+            return float(np.min(scan_ranges[mask]))
+
+        range_r = Range()
+        range_l = Range()
+        range_r.header.stamp = msg.header.stamp
+        range_l.header.stamp = msg.header.stamp
+        range_r.header.frame_id = "range_r_link"
+        range_l.header.frame_id = "range_l_link"
+        range_r.radiation_type = Range.INFRARED
+        range_l.radiation_type = Range.INFRARED
+        range_r.field_of_view = math.radians(45.0)
+        range_l.field_of_view = math.radians(45.0)
+        range_r.min_range = msg.range_min
+        range_l.min_range = msg.range_min
+        range_r.max_range = msg.range_max
+        range_l.max_range = msg.range_max
+        range_r.range = find_min_range(right_mask)
+        range_l.range = find_min_range(left_mask)
+
+        self.range_r_publisher.publish(range_r)
+        self.range_l_publisher.publish(range_l)
 
     # Process the TOF distance topics to create Point Clouds
     # Each topic message hass the TOF sensor name as well as the 64 distance points
