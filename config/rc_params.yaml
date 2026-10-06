@@ -37,7 +37,8 @@ controller_server:
     controller_plugins: ["FollowPath"]
     use_realtime_priority: false
     publish_zero_velocity: true
-    
+    # current_goal_checker: "goal_checker"
+
     progress_checker:
       plugin: "nav2_controller::SimpleProgressChecker"
       required_movement_radius: 1.5 #1.0
@@ -46,9 +47,11 @@ controller_server:
     goal_checker:
       stateful: True
       plugin: "nav2_controller::SimpleGoalChecker"
-      xy_goal_tolerance: 1.5 #1.0 #0.25
+      # NOTE: this xy may be too tight for gps operation since it wanders a lot
+      xy_goal_tolerance: 0.50 #1.5 #1.0 #0.25
       yaw_goal_tolerance: 3.0 #3.14 #0.25
-      
+      xy_goal_tolerance_buffer: 0.50
+
     FollowPath:
       plugin: "nav2_mppi_controller::MPPIController"
       time_steps: 56
@@ -275,7 +278,7 @@ local_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         enabled: true
-        inflation_radius: 0.3 #0.51 #0.400 #2.0 outdoors?
+        inflation_radius: 0.52 #0.51 #0.400 #2.0 outdoors?
         cost_scaling_factor: 10.0 #1.0
         inflate_unknown: false
         inflate_around_unknown: true
@@ -357,7 +360,7 @@ global_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 10.0 #3.0
-        inflation_radius: 0.2 #2.0 outdoors?
+        inflation_radius: 0.52 #2.0 outdoors?
       always_send_full_costmap: True
 
 map_server:
@@ -380,40 +383,6 @@ planner_server:
     costmap_update_timeout: 1.0
     
     GridBased:
-    #   plugin: "nav2_navfn_planner::NavfnPlanner"
-    #   tolerance: 0.5
-    #   use_astar: false
-    #   allow_unknown: False #true
-    #   use_final_approach_orientation: false
-      
-    # SmacPlannerHybrid:
-
-      # plugin: "nav2_smac_planner::SmacPlannerHybrid"
-      # downsample_costmap: false
-      # downsampling_factor: 1
-      # tolerance: 0.25
-      # allow_unknown: False #true
-      # max_iterations: 1000000
-      # max_on_approach_iterations: 1000
-      # max_planning_time: 20.0 #10.0  # 增加规划时间以支持复杂机动
-      # motion_model_for_search: "REEDS_SHEPP"  # 支持前进/后退的模型
-      # angle_quantization_bins: 72
-      # analytic_expansion_ratio: 3.5
-      # analytic_expansion_max_length: 3.0
-      # minimum_turning_radius: 1.5
-      # reverse_penalty: 2.0 #0.3 #2.0  # 显著降低倒车惩罚，允许掉头时倒车
-      # change_penalty: 0.1   # 降低方向改变惩罚
-      # non_straight_penalty: 1.0  # 降低非直线惩罚
-      # cost_penalty: 2.0
-      # retrospective_penalty: 0.010  # 降低回溯惩罚
-      # lookup_table_size: 20.0
-      # cache_obstacle_heuristic: false
-      # debug_visualizations: False #true  # 启用调试可视化
-      # use_quadratic_cost_penalty: False
-      # downsample_obstacle_heuristic: True
-      # goal_heading_mode: "ALL_DIRECTION"        # DEFAULT, BIDIRECTIONAL, ALL_DIRECTION
-      # smooth_path: True
-
       # https://docs.ros.org/en/humble/p/nav2_smac_planner/
       plugin: "nav2_smac_planner::SmacPlannerLattice"
       # plugin: "nav2_smac_planner::SmacPlannerHybrid"
@@ -547,7 +516,6 @@ collision_monitor:
     polygons: ["PolygonStop", "PolygonSlow"]
     PolygonStop:
       type: "polygon"
-      # points: "[[0.35, 0.2], [0.35, -0.2], [-0.45, -0.2], [-0.45, 0.2]]"
       points: "[[0.45, 0.2], [0.45, -0.2], [-0.45, -0.2], [-0.45, 0.2]]"
       action_type: "stop"
       min_points: 4  # max_points: 3 for Humble
@@ -555,15 +523,14 @@ collision_monitor:
       polygon_pub_topic: "polygon_stop"
     PolygonSlow:
       type: "polygon"
-      # points: "[[0.45, 0.3], [0.45, -0.3], [-0.55, -0.3], [-0.55, 0.3]]"
-      points: "[[1.0, 0.3], [1.0, -0.3], [-1.0, -0.3], [-1.0, 0.3]]"
+      # points: "[[1.0, 0.3], [1.0, -0.3], [-1.0, -0.3], [-1.0, 0.3]]"
+      # Slow down shape is cone for front and back to go through tight spaces easier
+      points: "[[1.0, 0.0], [0.6, 0.3], [-0.6, 0.3], [-1.0, 0.0], [-0.6, -0.3], [0.6, -0.3]]"
       action_type: "slowdown"
       min_points: 4  # max_points: 3 for Humble
       slowdown_ratio: 0.3
       visualize: True
       polygon_pub_topic: "polygon_slowdown"
-    #observation_sources: ["scan"]
-    #observation_sources: ["scan", "tof_fc", "tof_fl", "tof_fr"]
     observation_sources: ["scan", "tof_rc", "tof_rl", "tof_rr", "tof_fc", "tof_fl", "tof_fr"]
     scan:
       type: "scan"

@@ -62,8 +62,8 @@ class NavNode(Node):
     tc_next_state = T_INIT_WAIT
 
     # stop when this distance from mid_link during goto wp or cone
-    sm_xy_goal_wp   = 0.5 # 3 was set for outdoors? 3.0 #2.0
-    sm_xy_goal_cone = 0.25
+    # sm_xy_goal_wp   = 0.5 # 3 was set for outdoors? 3.0 #2.0
+    # sm_xy_goal_cone = 0.25
 
     CAL_IMU_WAIT_BUTT, CAL_IMU, CAL_IMU_DONE = range(3)
     calImuState = -1
@@ -88,9 +88,9 @@ class NavNode(Node):
 
     # state=1 use /cone_point to get location for navigator to drive to
     # Distance from detected cone to end navigation
-    cd_cone_stop_dist = 3.0 # 1.5 increase for GPS wander
+    cd_cone_stop_dist = 1.5 # 3.0 # 1.5 increase for GPS wander
     # nav this amount of time before getting new cone fix
-    cd_cone_nav_time = 2.5
+    cd_cone_nav_time = 5 # 2.5
 
     # state=2 use /Lidar +-22.5 FOV to get closer to cone using /cmd_vel
     cd_closer_dist = 0.5
@@ -247,9 +247,9 @@ class NavNode(Node):
         while not self.navsat_transform_server_set_param_svc.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('/navsat_transform/set_parameters service not available, waiting again...')
 
-        self.controller_server_set_param_svc = self.create_client(SetParameters, '/controller_server/set_parameters')
-        while not self.controller_server_set_param_svc.wait_for_service(timeout_sec=1.0):
-            self.get_logger().info('/controller_server/set_parameters service not available, waiting again...')
+        # self.controller_server_set_param_svc = self.create_client(SetParameters, '/controller_server/set_parameters')
+        # while not self.controller_server_set_param_svc.wait_for_service(timeout_sec=1.0):
+        #     self.get_logger().info('/controller_server/set_parameters service not available, waiting again...')
 
         self.efk_global_set_param_svc = self.create_client(SetParameters, '/efk_global/set_parameters')
         while not self.efk_global_set_param_svc.wait_for_service(timeout_sec=1.0):
@@ -711,8 +711,8 @@ class NavNode(Node):
         if state == self.T_NAV_WP :
             # configure navigation nodes parameters
             # change goal tolerance for nav to waypoint
-            self.send_set_param_request(self.controller_server_set_param_svc,
-                        "goal_checker.xy_goal_tolerance", self.sm_xy_goal_wp)
+            # self.send_set_param_request(self.controller_server_set_param_svc,
+            #             "goal_checker.xy_goal_tolerance", self.sm_xy_goal_wp)
 
             # Set which sensors are fused in EFK modules
             if self.wpGps == True :
@@ -737,8 +737,8 @@ class NavNode(Node):
         elif state == self.T_GOTO_CONE :
             # configure navigation nodes parameters for goto cone
             # change goal tolerance when approaching cone
-            self.send_set_param_request(self.controller_server_set_param_svc,
-                        "goal_checker.xy_goal_tolerance", self.sm_xy_goal_cone)
+            # self.send_set_param_request(self.controller_server_set_param_svc,
+            #             "goal_checker.xy_goal_tolerance", self.sm_xy_goal_cone)
             # Set which sensors are fused in EFK modules
             self.send_set_param_request(self.efk_global_set_param_svc, 
                         'publish_tf', False)
@@ -1289,7 +1289,6 @@ class NavNode(Node):
             self.get_logger().info(f"{func} navigate with BasicNavigator close to cone {state=}")
             self.tts("Go towards the cone")
             self.cd_sub_state = 0
-            # self.nav.cancelTask()
 
         # get cone xy from camera detect
         x:float = self.cone_at_x_cam
@@ -1307,7 +1306,7 @@ class NavNode(Node):
         killSwitchChange = ksc
         next_state = state
 
-        if x!=0 :
+        if x != 0 :
             dist = self.cd_cone_stop_dist
             t = self.cd_cone_nav_time
 
@@ -1316,9 +1315,10 @@ class NavNode(Node):
                 if not killSwitchActive :
                     # issue a navigation command
                     # x,y is relative to tof_fc sensor
-                    self.gotoConeXY(x,y,dist,t) # non-blocking
-                    self.cd_sub_timer = cur_time
-                    self.cd_sub_state = 1
+                    if self.nav.isTaskComplete() :
+                        self.gotoConeXY(x,y,dist,t) # non-blocking
+                        self.cd_sub_timer = cur_time
+                        self.cd_sub_state = 1
 
             elif self.cd_sub_state == 1 :
                 if killSwitchActive :
@@ -1330,7 +1330,6 @@ class NavNode(Node):
                     # check for nav complete or navigate time finished and try again
                     if (cur_time - self.cd_sub_timer) < t :
                         if self.nav.isTaskComplete() :
-                            # self.nav.cancelTask()
                             # x,y is relative to tof_fc sensor
                             d = math.sqrt(x*x + y*y)
 
@@ -1342,14 +1341,12 @@ class NavNode(Node):
                                 self.cd_sub_state = 0
                     else :
                         self.get_logger().info(f"{func} Get new cone placement and navigate some more {state=}")
-                        # self.nav.cancelTask()
                         self.cancelNav2Task()
                         self.cd_sub_state = 0
 
-        else :
+        else : # x == 0 , no cone detected
           if(state!=3) :
             self.get_logger().info(f"{func} lost cone {state=}")
-            # self.nav.cancelTask()
             self.cancelNav2Task()
             next_state = 0
 
