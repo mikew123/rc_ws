@@ -80,6 +80,10 @@ processing.
 
 #define PWRN_R_PIN 29 // 3.3V Rear TOF regulator enable pin
 
+// TOF config parameters
+#define RESOLUTION 64
+#define SHARPEN 5
+
 
 // create CENTER, LEFT, RIGHT TOF instances
 VL53L8CX tof_fc(&DEV_I2C_F, -1, -1);
@@ -191,17 +195,20 @@ void startMeasurement_F(const char* tof){
   // Start Measurements
   if(!strncmp(tof,"tof_fc",6)) {
     status = tof_fc.set_ranging_frequency_hz(SCAN_RATE_HZ);
-    status |= tof_fc.set_resolution(64);
+    status |= tof_fc.set_resolution(RESOLUTION);
+    status |= tof_fc.set_sharpener_percent(SHARPEN);
     status |= tof_fc.start_ranging();
   }
   if(!strncmp(tof,"tof_fl",6)) {
     status = tof_fl.set_ranging_frequency_hz(SCAN_RATE_HZ);
-    status |= tof_fl.set_resolution(64);
+    status |= tof_fl.set_resolution(RESOLUTION);
+    status |= tof_fl.set_sharpener_percent(SHARPEN);
     status |= tof_fl.start_ranging();
   }
   if(!strncmp(tof,"tof_fr",6)) {
     status = tof_fr.set_ranging_frequency_hz(SCAN_RATE_HZ);
-    status |= tof_fr.set_resolution(64);
+    status |= tof_fr.set_resolution(RESOLUTION);
+    status |= tof_fr.set_sharpener_percent(SHARPEN);
     status |= tof_fr.start_ranging();
   }
   Serial.printf("VL53L8CX %s range started status = 0x%02X\n", tof, status);
@@ -288,17 +295,20 @@ void startMeasurement_R(const char* tof){
  // Start Measurements
  if(!strncmp(tof,"tof_rc",6)) {
    status = tof_rc.set_ranging_frequency_hz(SCAN_RATE_HZ);
-   status |= tof_rc.set_resolution(64);
+   status |= tof_rc.set_resolution(RESOLUTION);
+   status |= tof_rc.set_sharpener_percent(SHARPEN);
    status |= tof_rc.start_ranging();
  }
  if(!strncmp(tof,"tof_rl",6)) {
    status = tof_rl.set_ranging_frequency_hz(SCAN_RATE_HZ);
-   status |= tof_rl.set_resolution(64);
+   status |= tof_rl.set_resolution(RESOLUTION);
+   status |= tof_rl.set_sharpener_percent(SHARPEN);
    status |= tof_rl.start_ranging();
  }
  if(!strncmp(tof,"tof_rr",6)) {
    status = tof_rr.set_ranging_frequency_hz(SCAN_RATE_HZ);
-   status |= tof_rr.set_resolution(64);
+   status |= tof_rr.set_resolution(RESOLUTION);
+   status |= tof_rr.set_sharpener_percent(SHARPEN);
    status |= tof_rr.start_ranging();
  }
  Serial.printf("VL53L8CX %s range started status = 0x%02X\n", tof, status);
