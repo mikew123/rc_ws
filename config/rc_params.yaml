@@ -298,14 +298,14 @@ global_costmap:
 
       # footprint_padding: 0.05
       # footprint: "[[0.40, 0.18], [0.40, -0.18], [-0.40, -0.18], [-0.40, 0.18]]"
-      robot_radius: 0.35 #0.25 #0.1
+      robot_radius: 0.2 # 0.35 #0.25 #0.1
 
       track_unknown_space: False #true
       plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
       # plugins: ["static_layer", "obstacle_layer"]
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
-        enabled: False # True
+        enabled: True
         footprint_clearing_enabled: False
         observation_sources: scan
         # observation_sources: tof_fr tof_rc tof_rl tof_rr

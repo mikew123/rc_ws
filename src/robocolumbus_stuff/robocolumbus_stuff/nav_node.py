@@ -837,9 +837,9 @@ class NavNode(Node):
 
             # Stop gotoPose and find detected cone
             if self.wpCone and (self.cone_det_cam_true_cnt > 4) :
-                self.cancelNav2Task()
-                self.tts("Cone detected while navigating to waypoint")
-                next_state = self.T_GOTO_CONE
+                if self.cancelNav2Task() :
+                    self.tts("Cone detected while navigating to waypoint")
+                    next_state = self.T_GOTO_CONE
 
             elif self.nav.isTaskComplete() :
                 result = self.nav.getResult()
@@ -1341,21 +1341,24 @@ class NavNode(Node):
                                 self.cd_sub_state = 0
                     else :
                         self.get_logger().info(f"{func} Get new cone placement and navigate some more {state=}")
-                        self.cancelNav2Task()
-                        self.cd_sub_state = 0
+                        if self.cancelNav2Task() :
+                            self.cd_sub_state = 0
 
         else : # x == 0 , no cone detected
           if(state!=3) :
             self.get_logger().info(f"{func} lost cone {state=}")
-            self.cancelNav2Task()
-            next_state = 0
+            if self.cancelNav2Task() :
+                next_state = 0
 
         return next_state
 
-    def cancelNav2Task(self) :
+    def cancelNav2Task(self) -> bool:
         if not self.nav.isTaskComplete() :
             self.nav.cancelTask()
+            self.get_logger().info(f"cancelNav2Task: canceling")
 
+        return self.nav.isTaskComplete()
+    
     #state 2 - get closer to cone
     def get_closer_to_cone(self, func:str, state:int, state_change:bool, ks:bool, ksc:bool) -> int :
         if state_change :
