@@ -1190,6 +1190,13 @@ class NavNode(Node):
         if state_change :
             self.cd_timer = time.time_ns()*1e-9
 
+        # Attempt search for cone when timeout occurs
+        if (time.time_ns()*1e-9 - self.cd_timer) > 15 :
+            self.cd_timer = time.time_ns()*1e-9
+            next_state = 0
+            state = 0
+            state_change = True
+            
         if state == 0 :
             next_state = self.search_for_cone(func,state,state_change,ks,ksc)
 
@@ -1365,6 +1372,7 @@ class NavNode(Node):
             self.get_logger().info(f"{func} drive closer to cone using cmd_vel and camera {state=}")
             self.tts("Get closer to cone")
 
+        # Wait 2 seconds before starting - not sure why
         if (time.time_ns()*1e-9 - self.cd_timer) < 2.0 : return state
 
         a:float = self.cone_at_a_cam

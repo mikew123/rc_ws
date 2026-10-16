@@ -139,7 +139,7 @@ efk_global :
     #         x_vel   , y_vel    , z_vel,
     #         roll_vel, pitch_vel, yaw_vel,
     #         x_accel , y_accel  , z_accel]
-    odom1_config: [true, true, false, # default as gps not used 
+    odom1_config: [false, false, false, # default as gps not used 
                   false, false, false,
                   false, false, false,
                   false, false, false,
