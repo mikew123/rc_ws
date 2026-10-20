@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#101b2c">
+    <title>RC Robot Controls</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: system-ui, sans-serif;
+        background: #101b2c;
+        color: #edf3fb;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        padding: 32px 18px;
+        background:
+          radial-gradient(ellipse at top, #1d3555 0, transparent 55%),
+          #101b2c;
+      }
+
+      main {
+        width: min(100%, 760px);
+        margin: 0 auto;
+      }
+
+      header {
+        margin-bottom: 24px;
+      }
+
+      .eyebrow {
+        margin: 0 0 8px;
+        color: #7dd3fc;
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 7vw, 3rem);
+        letter-spacing: -0.04em;
+      }
+
+      header p:last-child,
+      .description,
+      .notice {
+        color: #a9b8cc;
+        line-height: 1.55;
+      }
+
+      .connection-status,
+      .control-card {
+        border: 1px solid #2b3d55;
+        border-radius: 16px;
+        background: rgb(19 32 51 / 92%);
+        box-shadow: 0 16px 36px rgb(0 0 0 / 18%);
+      }
+
+      .connection-status {
+        min-height: 1.5em;
+        padding: 14px 18px;
+        margin: 0 0 18px;
+        color: #a9b8cc;
+        font-size: 0.9rem;
+      }
+
+      .connection-status[data-state="error"] {
+        color: #fca5a5;
+      }
+
+      .control-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .control-card {
+        padding: 22px;
+      }
+
+      .card-heading {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      h2 {
+        margin: 0;
+        font-size: 1.3rem;
+      }
+
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        color: #a9b8cc;
+        font-size: 0.82rem;
+        white-space: nowrap;
+      }
+
+      .status::before {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: #8290a3;
+        content: "";
+      }
+
+      .status[data-running="true"] {
+        color: #86efac;
+      }
+
+      .status[data-running="true"]::before {
+        background: #4ade80;
+        box-shadow: 0 0 10px rgb(74 222 128 / 55%);
+      }
+
+      .description {
+        min-height: 3.1em;
+        margin: 14px 0 20px;
+        font-size: 0.95rem;
+      }
+
+      .button-row {
+        display: flex;
+        gap: 10px;
+      }
+
+      button {
+        min-height: 44px;
+        padding: 10px 16px;
+        border: 0;
+        border-radius: 9px;
+        color: #08111c;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+        flex: 1;
+        transition: filter 120ms ease, transform 120ms ease;
+      }
+
+      button:focus-visible {
+        outline: 3px solid #7dd3fc;
+        outline-offset: 2px;
+      }
+
+      button:hover:not(:disabled) {
+        filter: brightness(1.1);
+        transform: translateY(-1px);
+      }
+
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.45;
+      }
+
+      .start-button {
+        background: #7dd3fc;
+      }
+
+      .stop-button {
+        background: #fca5a5;
+      }
+
+      .notice {
+        margin: 18px 2px 0;
+        font-size: 0.86rem;
+      }
+
+      @media (max-width: 560px) {
+        body {
+          padding: 24px 14px;
+        }
+
+        .control-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .description {
+          min-height: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="eyebrow">RoboColumbus · Operations</p>
+        <h1>RC Robot Controls</h1>
+        <p>Start or stop the robot bringup and rosbag recording processes.</p>
+      </header>
+
+      <p class="connection-status" id="connection-status" role="status" aria-live="polite">
+        Connecting to robot controls…
+      </p>
+
+      <section class="control-grid" aria-label="Robot process controls">
+        <article class="control-card">
+          <div class="card-heading">
+            <h2>Robot bringup</h2>
+            <span class="status" id="rc-status">Unknown</span>
+          </div>
+          <p class="description">Run the <code>rc</code> alias to build and launch the robot stack.</p>
+          <div class="button-row">
+            <button class="start-button" type="button" data-alias="rc" data-action="start" disabled>
+              Start rc
+            </button>
+            <button class="stop-button" type="button" data-alias="rc" data-action="stop" disabled>
+              Stop rc
+            </button>
+          </div>
+        </article>
+
+        <article class="control-card">
+          <div class="card-heading">
+            <h2>Rosbag recording</h2>
+            <span class="status" id="rc_bag-status">Unknown</span>
+          </div>
+          <p class="description">Run the <code>rc_bag</code> alias to record the configured ROS topics.</p>
+          <div class="button-row">
+            <button class="start-button" type="button" data-alias="rc_bag" data-action="start" disabled>
+              Start rc_bag
+            </button>
+            <button class="stop-button" type="button" data-alias="rc_bag" data-action="stop" disabled>
+              Stop rc_bag
+            </button>
+          </div>
+        </article>
+      </section>
+
+      <p class="notice">
+        Stop buttons terminate only the process group started by this page; they do not stop
+        unrelated ROS processes.
+      </p>
+    </main>
+
+    <script>
+      const connectionStatus = document.querySelector("#connection-status");
+      const controlButtons = document.querySelectorAll("[data-alias]");
+
+      function setConnectionStatus(message, isError = false) {
+        connectionStatus.textContent = message;
+        connectionStatus.dataset.state = isError ? "error" : "connected";
+      }
+
+      function setJobStatus(alias, job) {
+        const indicator = document.querySelector(`#${alias}-status`);
+        const running = Boolean(job?.running);
+        indicator.textContent = running
+          ? "Running"
+          : job?.exit_code !== null && job?.exit_code !== undefined
+            ? `Stopped · exit ${job.exit_code}`
+            : "Not started";
+        indicator.dataset.running = String(running);
+
+        for (const button of controlButtons) {
+          if (button.dataset.alias !== alias) {
+            continue;
+          }
+          button.disabled = button.dataset.action === "start" ? running : !running;
+        }
+      }
+
+      async function request(path, method = "GET") {
+        const response = await fetch(path, { method });
+        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(result.error || `Request failed (${response.status}).`);
+        }
+        return result;
+      }
+
+      async function refreshStatus() {
+        const result = await request("/api/status");
+        setJobStatus("rc", result.jobs.rc);
+        setJobStatus("rc_bag", result.jobs.rc_bag);
+      }
+
+      async function pollStatus() {
+        try {
+          await refreshStatus();
+          setConnectionStatus("Connected. Controls are ready.");
+        } catch (error) {
+          for (const button of controlButtons) {
+            button.disabled = true;
+          }
+          setConnectionStatus(error.message, true);
+        }
+      }
+
+      pollStatus();
+      setInterval(pollStatus, 3000);
+
+      for (const button of controlButtons) {
+        button.addEventListener("click", async () => {
+          const { alias, action } = button.dataset;
+          button.disabled = true;
+          setConnectionStatus(`${action === "start" ? "Starting" : "Stopping"} ${alias}…`);
+          try {
+            const result = await request(`/api/${alias}/${action}`, "POST");
+            setConnectionStatus(result.message);
+            await refreshStatus();
+          } catch (error) {
+            setConnectionStatus(error.message, true);
+            try {
+              await refreshStatus();
+            } catch {
+              for (const control of controlButtons) {
+                control.disabled = true;
+              }
+              setConnectionStatus("Could not refresh process status.", true);
+            }
+          }
+        });
+      }
+    </script>
+  </body>
+</html>

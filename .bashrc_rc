@@ -37,6 +37,10 @@ ros2 bag record -s mcap -b 500000000 \
          /polygon_stop /polygon_slowdown /optimal_trajectory /plan \
          /json_msg /color/spatial_detections
 '
+alias rc_web=' \
+    cp html/index.html /var/www/html/index.html ; \
+    python3 html/control_server.py \
+'
 
 alias rc_kill='source  ~/kill_ros2'
 

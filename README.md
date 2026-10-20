@@ -517,13 +517,13 @@ View through windows<br>
 
 # RC web controls
 
+run "rc_web" from command line to start a web control page.
+
 The control page starts and stops the `rc` and `rc_bag` aliases in separate
 process groups. Run its backend as the same user whose interactive Bash shell
-defines those aliases:
+defines those aliases.
 
-```bash
-python3 ~/rc_ws/html/control_server.py
-```
+rc_web also copies html/index.html to /var/www/html to keep the web page up to date.
 
 On first launch the server generates a self-signed HTTPS certificate and
 private key under `~/.local/share/rc-control/`. Open
