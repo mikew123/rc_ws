@@ -514,3 +514,21 @@ Note the WiFi antennas in the back<br>
 View through windows<br>
 <img src="support/view_back_window.jpg"><br>
 <img src="support/view_through_side_window.jpg"><br>
+
+# RC web controls
+
+The control page starts and stops the `rc` and `rc_bag` aliases in separate
+process groups. Run its backend as the same user whose interactive Bash shell
+defines those aliases:
+
+```bash
+python3 ~/rc_ws/html/control_server.py
+```
+
+On first launch the server generates a self-signed HTTPS certificate and
+private key under `~/.local/share/rc-control/`. Open
+`https://<robot-ip>:8765` from a browser on the robot's trusted LAN and accept
+the browser's self-signed certificate warning. Stop the backend with Ctrl+C
+when finished. HTTPS encrypts traffic but does not authenticate users; anyone
+who can reach the server can operate the controls, so do not expose it outside
+a trusted network.
