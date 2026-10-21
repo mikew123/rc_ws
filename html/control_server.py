@@ -3,6 +3,7 @@
 import ipaddress
 import json
 import logging
+import math
 import os
 import signal
 import socket
@@ -27,6 +28,122 @@ jobs: dict[str, subprocess.Popen[bytes]] = {}
 jobs_lock = threading.Lock()
 
 
+class RosTopicFieldReader:
+    def __init__(self, topic: str, field: str) -> None:
+        self.command = ["ros2", "topic", "echo", topic, "--field", field]
+        self._stop_event = threading.Event()
+        self._process_lock = threading.Lock()
+        self._value_lock = threading.Lock()
+        self._process: subprocess.Popen[str] | None = None
+        self._value: float | None = None
+        self._value_time: float | None = None
+        self._thread = threading.Thread(
+            target=self._run,
+            name=f"ros-topic-reader-{field}",
+            daemon=True,
+        )
+
+    def start(self) -> None:
+        self._thread.start()
+
+    def stop(self) -> None:
+        self._stop_event.set()
+        with self._process_lock:
+            process = self._process
+        if process is not None and process.poll() is None:
+            try:
+                process.terminate()
+            except ProcessLookupError:
+                pass
+        self._thread.join(timeout=3)
+        if self._thread.is_alive() and process is not None and process.poll() is None:
+            process.kill()
+            self._thread.join(timeout=2)
+
+    def value(self) -> float | None:
+        with self._value_lock:
+            if self._value_time is None or time.monotonic() - self._value_time > 3:
+                return None
+            return self._value
+
+    def _run(self) -> None:
+        while not self._stop_event.is_set():
+            try:
+                process = subprocess.Popen(
+                    self.command,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.DEVNULL,
+                    text=True,
+                    bufsize=1,
+                )
+            except OSError:
+                logging.exception("Could not start ROS topic reader: %s", self.command)
+                self._stop_event.wait(5)
+                continue
+
+            with self._process_lock:
+                self._process = process
+            if self._stop_event.is_set():
+                try:
+                    process.terminate()
+                except ProcessLookupError:
+                    pass
+
+            try:
+                assert process.stdout is not None
+                for line in process.stdout:
+                    if self._stop_event.is_set():
+                        break
+                    self._update_value(line)
+            except OSError:
+                logging.exception("Could not read ROS topic output: %s", self.command)
+            finally:
+                if process.poll() is None:
+                    try:
+                        process.terminate()
+                    except ProcessLookupError:
+                        pass
+                try:
+                    return_code = process.wait(timeout=2)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    return_code = process.wait()
+                with self._process_lock:
+                    if self._process is process:
+                        self._process = None
+
+            if return_code != 0 and not self._stop_event.is_set():
+                logging.warning(
+                    "ROS topic reader exited with code %d: %s",
+                    return_code,
+                    self.command,
+                )
+            self._stop_event.wait(1)
+
+    def _update_value(self, line: str) -> None:
+        if line.strip() == "---":
+            return
+        try:
+            voltage = float(line.strip())
+        except ValueError:
+            if line.strip():
+                logging.warning("Ignoring invalid ROS topic value: %r", line.strip())
+            return
+
+        with self._value_lock:
+            if not math.isfinite(voltage) or voltage <= 0:
+                self._value = None
+                self._value_time = None
+            else:
+                self._value = voltage
+                self._value_time = time.monotonic()
+
+
+status_readers = {
+    "battery_voltage": RosTopicFieldReader("/battery_status", "voltage"),
+}
+
+
 class ControlHandler(BaseHTTPRequestHandler):
     server_version = "RCControl/1.0"
 
@@ -43,7 +160,8 @@ class ControlHandler(BaseHTTPRequestHandler):
                     }
                     for name, process in jobs.items()
                 }
-            self._send_json(200, {"jobs": status})
+            statuses = {name: reader.value() for name, reader in status_readers.items()}
+            self._send_json(200, {"jobs": status, "statuses": statuses})
             return
         self.send_error(404)
 
@@ -262,6 +380,11 @@ def stop_jobs() -> None:
             process.wait()
 
 
+def stop_status_readers() -> None:
+    for reader in status_readers.values():
+        reader.stop()
+
+
 def exit_on_signal(signum: int, frame: object) -> None:
     raise SystemExit(0)
 
@@ -339,11 +462,14 @@ def main() -> None:
     server = ThreadingHTTPServer((HOST, PORT), ControlHandler)
     server.daemon_threads = True
     server.socket = context.wrap_socket(server.socket, server_side=True)
+    for reader in status_readers.values():
+        reader.start()
     logging.info("RC control page listening on https://%s:%d", socket.gethostname(), PORT)
     try:
         server.serve_forever()
     finally:
         server.server_close()
+        stop_status_readers()
         stop_jobs()
 
 

@@ -524,6 +524,8 @@ process groups. Run its backend as the same user whose interactive Bash shell
 defines those aliases.
 
 rc_web also copies html/index.html to /var/www/html to keep the web page up to date.
+The control page displays battery voltage and a level graphic from the ROS
+`/battery_status` topic; the indicator is blank when no recent voltage is available.
 
 On first launch the server generates a self-signed HTTPS certificate and
 private key under `~/.local/share/rc-control/`. Open

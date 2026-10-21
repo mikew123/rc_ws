@@ -87,6 +87,47 @@
         padding: 22px;
       }
 
+      .battery-indicator {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: #edf3fb;
+        font-variant-numeric: tabular-nums;
+        font-weight: 700;
+      }
+
+      .battery-icon {
+        position: relative;
+        width: 42px;
+        height: 23px;
+        padding: 3px;
+        border: 2px solid currentColor;
+        border-radius: 5px;
+      }
+
+      .battery-icon::after {
+        position: absolute;
+        top: 5px;
+        right: -6px;
+        width: 3px;
+        height: 9px;
+        border-radius: 0 2px 2px 0;
+        background: currentColor;
+        content: "";
+      }
+
+      .battery-fill {
+        width: 0;
+        height: 100%;
+        border-radius: 1px;
+        background: #4ade80;
+        transition: width 250ms ease, background-color 250ms ease;
+      }
+
+      .battery-indicator[data-available="false"] {
+        color: #8290a3;
+      }
+
       .card-heading {
         display: flex;
         gap: 12px;
@@ -211,6 +252,25 @@
       <section class="control-grid" aria-label="Robot process controls">
         <article class="control-card">
           <div class="card-heading">
+            <h2>Battery</h2>
+            <span
+              class="battery-indicator"
+              id="battery-indicator"
+              data-available="false"
+              role="img"
+              aria-label="Battery level unavailable"
+            >
+              <span class="battery-icon" aria-hidden="true">
+                <span class="battery-fill" id="battery-fill"></span>
+              </span>
+              <span id="battery-voltage">---</span>
+            </span>
+          </div>
+          <p class="description">Battery voltage from <code>/battery_status</code>.</p>
+        </article>
+
+        <article class="control-card">
+          <div class="card-heading">
             <h2>Robot bringup</h2>
             <span class="status" id="rc-status">Unknown</span>
           </div>
@@ -267,6 +327,9 @@
       const connectionStatus = document.querySelector("#connection-status");
       const controlButtons = document.querySelectorAll("[data-alias]");
       const commandButtons = document.querySelectorAll("[data-command]");
+      const batteryIndicator = document.querySelector("#battery-indicator");
+      const batteryFill = document.querySelector("#battery-fill");
+      const batteryVoltage = document.querySelector("#battery-voltage");
       let controlsConnected = false;
 
       function setCommandButtonsEnabled(enabled) {
@@ -299,6 +362,28 @@
         }
       }
 
+      function setBatteryStatus(voltage) {
+        if (typeof voltage !== "number" || !Number.isFinite(voltage) || voltage <= 0) {
+          batteryFill.style.width = "0%";
+          batteryFill.style.backgroundColor = "";
+          batteryVoltage.textContent = "---";
+          batteryIndicator.dataset.available = "false";
+          batteryIndicator.setAttribute("aria-label", "Battery level unavailable");
+          return;
+        }
+
+        const percentage = Math.max(0, Math.min(100, ((voltage - 11.0) / 1.5) * 100));
+        batteryFill.style.width = `${percentage}%`;
+        batteryFill.style.backgroundColor = percentage <= 20
+          ? "#fb7185"
+          : percentage <= 50
+            ? "#fbbf24"
+            : "#4ade80";
+        batteryVoltage.textContent = `${voltage.toFixed(2)} V`;
+        batteryIndicator.dataset.available = "true";
+        batteryIndicator.setAttribute("aria-label", `Battery level ${percentage.toFixed(0)}%`);
+      }
+
       async function request(path, method = "GET") {
         const response = await fetch(path, { method });
         const result = await response.json();
@@ -312,6 +397,7 @@
         const result = await request("/api/status");
         setJobStatus("rc", result.jobs.rc);
         setJobStatus("rc_bag", result.jobs.rc_bag);
+        setBatteryStatus(result.statuses.battery_voltage);
       }
 
       async function pollStatus() {
@@ -324,12 +410,13 @@
           for (const button of controlButtons) {
             button.disabled = true;
           }
+          setBatteryStatus(null);
           setConnectionStatus(error.message, true);
         }
       }
 
       pollStatus();
-      setInterval(pollStatus, 3000);
+      setInterval(pollStatus, 1000);
 
       for (const button of controlButtons) {
         button.addEventListener("click", async () => {
