@@ -28,6 +28,7 @@ class Robocolumbus25TeleopNode(Node):
     maxSteerAngleRad: float = 0.698   # ~40 degrees
     wheelBase:float         = 0.490 # meters
     cmd_vel_zero:bool = False
+    lastLinearX: float = 0.0
 
     def __init__(self):
         super().__init__('rc25_teleop_node')
@@ -101,8 +102,10 @@ class Robocolumbus25TeleopNode(Node):
             else :
                 angularZ = math.tan(steerAngleRad) * linearX / self.wheelBase
 
-            self.get_logger().info(f"{throttle=:.3f} {steer=:.3f} : {linearX=:.3f} {angularZ=:.3f} {steerAngleRad=:.3f}")
-
+            if abs(linearX-self.lastLinearX) > 0.05 :
+                self.get_logger().info(f"{throttle=:.3f} {steer=:.3f} : {linearX=:.3f} {angularZ=:.3f} {steerAngleRad=:.3f}")
+            self.lastLinearX = linearX
+            
             # Publish /cmd_vel
             cmd_vel.linear.x = linearX
             cmd_vel.angular.z = angularZ

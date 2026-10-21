@@ -172,6 +172,10 @@
         background: #fca5a5;
       }
 
+      .kill-button {
+        background: #fb7185;
+      }
+
       .notice {
         margin: 18px 2px 0;
         font-size: 0.86rem;
@@ -197,7 +201,7 @@
       <header>
         <p class="eyebrow">RoboColumbus · Operations</p>
         <h1>RC Robot Controls</h1>
-        <p>Start or stop the robot bringup and rosbag recording processes.</p>
+        <p>Control robot processes and publish robot start or kill-switch messages.</p>
       </header>
 
       <p class="connection-status" id="connection-status" role="status" aria-live="polite">
@@ -236,17 +240,41 @@
             </button>
           </div>
         </article>
+
+        <article class="control-card">
+          <div class="card-heading">
+            <h2>Robot commands</h2>
+          </div>
+          <p class="description">Publish a start or kill-switch message to <code>/json_msg</code>.</p>
+          <div class="button-row">
+            <button class="start-button" type="button" data-command="start" disabled>
+              Start robot
+            </button>
+            <button class="kill-button" type="button" data-command="kill-switch" disabled>
+              Kill switch
+            </button>
+          </div>
+        </article>
       </section>
 
       <p class="notice">
         Stop buttons terminate only the process group started by this page; they do not stop
-        unrelated ROS processes.
+        unrelated ROS processes. Robot command messages are published four times per button state.
       </p>
     </main>
 
     <script>
       const connectionStatus = document.querySelector("#connection-status");
       const controlButtons = document.querySelectorAll("[data-alias]");
+      const commandButtons = document.querySelectorAll("[data-command]");
+      let controlsConnected = false;
+
+      function setCommandButtonsEnabled(enabled) {
+        controlsConnected = enabled;
+        for (const button of commandButtons) {
+          button.disabled = !enabled || button.dataset.busy === "true";
+        }
+      }
 
       function setConnectionStatus(message, isError = false) {
         connectionStatus.textContent = message;
@@ -289,8 +317,10 @@
       async function pollStatus() {
         try {
           await refreshStatus();
+          setCommandButtonsEnabled(true);
           setConnectionStatus("Connected. Controls are ready.");
         } catch (error) {
+          setCommandButtonsEnabled(false);
           for (const button of controlButtons) {
             button.disabled = true;
           }
@@ -320,6 +350,24 @@
               }
               setConnectionStatus("Could not refresh process status.", true);
             }
+          }
+        });
+      }
+
+      for (const button of commandButtons) {
+        button.addEventListener("click", async () => {
+          const { command } = button.dataset;
+          button.dataset.busy = "true";
+          button.disabled = true;
+          setConnectionStatus(`Publishing ${command} message…`);
+          try {
+            const result = await request(`/api/robot/${command}`, "POST");
+            setConnectionStatus(result.message);
+          } catch (error) {
+            setConnectionStatus(error.message, true);
+          } finally {
+            button.dataset.busy = "false";
+            button.disabled = !controlsConnected;
           }
         });
       }

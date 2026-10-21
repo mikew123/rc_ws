@@ -22,6 +22,7 @@ CERTIFICATE_DIR = Path.home() / ".local" / "share" / "rc-control"
 CERTIFICATE_FILE = CERTIFICATE_DIR / "server.crt"
 PRIVATE_KEY_FILE = CERTIFICATE_DIR / "server.key"
 COMMANDS = frozenset({"rc", "rc_bag"})
+ROBOT_ACTIONS = frozenset({"start", "kill-switch"})
 jobs: dict[str, subprocess.Popen[bytes]] = {}
 jobs_lock = threading.Lock()
 
@@ -52,6 +53,12 @@ class ControlHandler(BaseHTTPRequestHandler):
             return
 
         parts = self.path.strip("/").split("/")
+        if parts == ["api", "robot", "start"]:
+            self._publish_robot_action("start")
+            return
+        if parts == ["api", "robot", "kill-switch"]:
+            self._publish_robot_action("kill-switch")
+            return
         if (
             len(parts) != 3
             or parts[0] != "api"
@@ -120,6 +127,41 @@ class ControlHandler(BaseHTTPRequestHandler):
             )
             return
         self._send_json(200, {"message": f"Started {alias_name}.", "running": True})
+
+
+    def _publish_robot_action(self, action: str) -> None:
+        if action not in ROBOT_ACTIONS:
+            self.send_error(404)
+            return
+
+        button = "buttonDo" if action == "start" else "buttonKill"
+        try:
+            self._publish_json_msg({"nav": {button: True}})
+            self._publish_json_msg({"nav": {button: False}})
+        except (OSError, subprocess.TimeoutExpired, RuntimeError) as error:
+            logging.exception("Could not publish robot %s message", action)
+            self._send_json(500, {"error": f"Could not publish {action} message: {error}"})
+            return
+
+        label = "start" if action == "start" else "kill switch"
+        self._send_json(200, {"message": f"Published {label} message four times."})
+
+    def _publish_json_msg(self, message: dict[str, dict[str, bool]]) -> None:
+        json_message = json.dumps(message)
+        ros_message = "data: " + json.dumps(json_message)
+        result = subprocess.run(
+            [
+                "ros2", "topic", "pub", "-w", "1", "-r", "1", "-t", "4",
+                "/json_msg", "std_msgs/msg/String", ros_message,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
+        )
+        if result.returncode != 0:
+            details = result.stderr.strip() or result.stdout.strip()
+            raise RuntimeError(details or f"ros2 topic pub exited with code {result.returncode}")
 
     def _stop_job(self, alias_name: str) -> None:
         with jobs_lock:
