@@ -524,10 +524,12 @@ process groups. Run its backend as the same user whose interactive Bash shell
 defines those aliases.
 
 rc_web also copies html/index.html to /var/www/html to keep the web page up to date.
-The control page displays battery voltage and a level graphic from the ROS
-`/battery_status` topic, plus CPU temperature from
-`/sys/class/thermal/thermal_zone0/temp`. Either status is shown as unavailable
-when its sensor value cannot be read.
+The control page displays battery voltage from the ROS `/battery_status` topic
+with a bar indicator scaled from 11 V to 12.5 V (red below 11.2 V, yellow below
+11.3 V, and green from 11.3 V). CPU temperature from
+`/sys/class/thermal/thermal_zone0/temp` is shown with a thermometer scaled from
+25 °C to 85 °C (green below 75 °C, yellow below 80 °C, and red from 80 °C).
+Either status is shown as unavailable when its sensor value cannot be read.
 
 On first launch the server generates a self-signed HTTPS certificate and
 private key under `~/.local/share/rc-control/`. Open

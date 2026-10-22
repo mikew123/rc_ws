@@ -103,6 +103,8 @@
         padding: 3px;
         border: 2px solid currentColor;
         border-radius: 5px;
+        display: flex;
+        align-items: center;
       }
 
       .battery-icon::after {
@@ -116,12 +118,30 @@
         content: "";
       }
 
-      .battery-fill {
-        width: 0;
+      .battery-bars {
+        display: flex;
+        width: 100%;
         height: 100%;
+        gap: 2px;
+      }
+
+      .battery-bar {
+        flex: 1;
         border-radius: 1px;
+        background: #32445a;
+        transition: background-color 250ms ease;
+      }
+
+      .battery-indicator[data-available="true"][data-color="red"] .battery-bar[data-active="true"] {
+        background: #fb7185;
+      }
+
+      .battery-indicator[data-available="true"][data-color="yellow"] .battery-bar[data-active="true"] {
+        background: #fbbf24;
+      }
+
+      .battery-indicator[data-available="true"][data-color="green"] .battery-bar[data-active="true"] {
         background: #4ade80;
-        transition: width 250ms ease, background-color 250ms ease;
       }
 
       .battery-indicator[data-available="false"] {
@@ -129,10 +149,64 @@
       }
 
       .temperature-indicator {
+        display: flex;
+        align-items: center;
+        gap: 10px;
         color: #edf3fb;
         font-size: 1.6rem;
         font-variant-numeric: tabular-nums;
         font-weight: 700;
+      }
+
+      .thermometer-icon {
+        position: relative;
+        width: 24px;
+        height: 54px;
+        color: #8290a3;
+      }
+
+      .thermometer-track {
+        position: absolute;
+        top: 0;
+        left: 7px;
+        width: 10px;
+        height: 42px;
+        border: 2px solid currentColor;
+        border-radius: 7px 7px 0 0;
+      }
+
+      .thermometer-fill {
+        position: absolute;
+        bottom: 8px;
+        left: 10px;
+        width: 4px;
+        height: 0;
+        border-radius: 3px 3px 0 0;
+        background: currentColor;
+        transition: height 250ms ease, background-color 250ms ease;
+      }
+
+      .thermometer-bulb {
+        position: absolute;
+        bottom: 0;
+        left: 3px;
+        width: 18px;
+        height: 18px;
+        border: 2px solid currentColor;
+        border-radius: 50%;
+        background: currentColor;
+      }
+
+      .temperature-indicator[data-available="true"][data-color="green"] .thermometer-icon {
+        color: #4ade80;
+      }
+
+      .temperature-indicator[data-available="true"][data-color="yellow"] .thermometer-icon {
+        color: #fbbf24;
+      }
+
+      .temperature-indicator[data-available="true"][data-color="red"] .thermometer-icon {
+        color: #fb7185;
       }
 
       .temperature-indicator[data-available="false"] {
@@ -272,7 +346,13 @@
               aria-label="Battery level unavailable"
             >
               <span class="battery-icon" aria-hidden="true">
-                <span class="battery-fill" id="battery-fill"></span>
+                <span class="battery-bars">
+                  <span class="battery-bar"></span>
+                  <span class="battery-bar"></span>
+                  <span class="battery-bar"></span>
+                  <span class="battery-bar"></span>
+                  <span class="battery-bar"></span>
+                </span>
               </span>
               <span id="battery-voltage">---</span>
             </span>
@@ -287,7 +367,16 @@
               class="temperature-indicator"
               id="cpu-temperature"
               data-available="false"
-            >---</span>
+              role="img"
+              aria-label="CPU temperature unavailable"
+            >
+              <span class="thermometer-icon" aria-hidden="true">
+                <span class="thermometer-track"></span>
+                <span class="thermometer-fill" id="temperature-fill"></span>
+                <span class="thermometer-bulb"></span>
+              </span>
+              <span id="temperature-value">---</span>
+            </span>
           </div>
           <p class="description">CPU temperature from the Linux thermal sensor.</p>
         </article>
@@ -351,9 +440,11 @@
       const controlButtons = document.querySelectorAll("[data-alias]");
       const commandButtons = document.querySelectorAll("[data-command]");
       const batteryIndicator = document.querySelector("#battery-indicator");
-      const batteryFill = document.querySelector("#battery-fill");
+      const batteryBars = document.querySelectorAll(".battery-bar");
       const batteryVoltage = document.querySelector("#battery-voltage");
       const cpuTemperature = document.querySelector("#cpu-temperature");
+      const temperatureFill = document.querySelector("#temperature-fill");
+      const temperatureValue = document.querySelector("#temperature-value");
       let controlsConnected = false;
 
       function setCommandButtonsEnabled(enabled) {
@@ -388,30 +479,41 @@
 
       function setBatteryStatus(voltage) {
         if (typeof voltage !== "number" || !Number.isFinite(voltage) || voltage <= 0) {
-          batteryFill.style.width = "0%";
-          batteryFill.style.backgroundColor = "";
+          for (const bar of batteryBars) {
+            bar.dataset.active = "false";
+          }
           batteryVoltage.textContent = "---";
           batteryIndicator.dataset.available = "false";
+          batteryIndicator.removeAttribute("data-color");
           batteryIndicator.setAttribute("aria-label", "Battery level unavailable");
           return;
         }
 
         const percentage = Math.max(0, Math.min(100, ((voltage - 11.0) / 1.5) * 100));
-        batteryFill.style.width = `${percentage}%`;
-        batteryFill.style.backgroundColor = percentage <= 20
-          ? "#fb7185"
-          : percentage <= 50
-            ? "#fbbf24"
-            : "#4ade80";
+        const activeBars = Math.round((percentage / 100) * batteryBars.length);
+        const color = voltage < 11.2 ? "red" : voltage < 11.3 ? "yellow" : "green";
+        batteryBars.forEach((bar, index) => {
+          bar.dataset.active = String(index < activeBars);
+        });
         batteryVoltage.textContent = `${voltage.toFixed(2)} V`;
         batteryIndicator.dataset.available = "true";
-        batteryIndicator.setAttribute("aria-label", `Battery level ${percentage.toFixed(0)}%`);
+        batteryIndicator.dataset.color = color;
+        batteryIndicator.setAttribute("aria-label", `Battery voltage ${voltage.toFixed(2)} volts`);
       }
 
       function setCpuTemperature(temperature) {
         const available = typeof temperature === "number" && Number.isFinite(temperature);
-        cpuTemperature.textContent = available ? `${temperature.toFixed(1)} °C` : "---";
+        temperatureValue.textContent = available ? `${temperature.toFixed(1)} °C` : "---";
         cpuTemperature.dataset.available = String(available);
+        if (!available) {
+          temperatureFill.style.height = "0";
+          cpuTemperature.removeAttribute("data-color");
+        } else {
+          const percentage = Math.max(0, Math.min(100, ((temperature - 25) / 60) * 100));
+          const fillHeight = (percentage / 100) * 39;
+          temperatureFill.style.height = `${fillHeight}px`;
+          cpuTemperature.dataset.color = temperature < 75 ? "green" : temperature < 80 ? "yellow" : "red";
+        }
         cpuTemperature.setAttribute(
           "aria-label",
           available ? `CPU temperature ${temperature.toFixed(1)} degrees Celsius` : "CPU temperature unavailable",
