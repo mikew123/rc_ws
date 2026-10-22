@@ -19,6 +19,7 @@ from pathlib import Path
 HOST = "0.0.0.0"
 PORT = 8765
 HTML_FILE = Path(__file__).with_name("index.html")
+CPU_TEMPERATURE_FILE = Path("/sys/class/thermal/thermal_zone0/temp")
 CERTIFICATE_DIR = Path.home() / ".local" / "share" / "rc-control"
 CERTIFICATE_FILE = CERTIFICATE_DIR / "server.crt"
 PRIVATE_KEY_FILE = CERTIFICATE_DIR / "server.key"
@@ -144,6 +145,14 @@ status_readers = {
 }
 
 
+def cpu_temperature_celsius() -> float | None:
+    try:
+        temperature_millidegrees = int(CPU_TEMPERATURE_FILE.read_text().strip())
+    except (OSError, ValueError):
+        return None
+    return temperature_millidegrees / 1000
+
+
 class ControlHandler(BaseHTTPRequestHandler):
     server_version = "RCControl/1.0"
 
@@ -161,6 +170,7 @@ class ControlHandler(BaseHTTPRequestHandler):
                     for name, process in jobs.items()
                 }
             statuses = {name: reader.value() for name, reader in status_readers.items()}
+            statuses["cpu_temperature_celsius"] = cpu_temperature_celsius()
             self._send_json(200, {"jobs": status, "statuses": statuses})
             return
         self.send_error(404)

@@ -128,6 +128,17 @@
         color: #8290a3;
       }
 
+      .temperature-indicator {
+        color: #edf3fb;
+        font-size: 1.6rem;
+        font-variant-numeric: tabular-nums;
+        font-weight: 700;
+      }
+
+      .temperature-indicator[data-available="false"] {
+        color: #8290a3;
+      }
+
       .card-heading {
         display: flex;
         gap: 12px;
@@ -271,6 +282,18 @@
 
         <article class="control-card">
           <div class="card-heading">
+            <h2>CPU temperature</h2>
+            <span
+              class="temperature-indicator"
+              id="cpu-temperature"
+              data-available="false"
+            >---</span>
+          </div>
+          <p class="description">CPU temperature from the Linux thermal sensor.</p>
+        </article>
+
+        <article class="control-card">
+          <div class="card-heading">
             <h2>Robot bringup</h2>
             <span class="status" id="rc-status">Unknown</span>
           </div>
@@ -330,6 +353,7 @@
       const batteryIndicator = document.querySelector("#battery-indicator");
       const batteryFill = document.querySelector("#battery-fill");
       const batteryVoltage = document.querySelector("#battery-voltage");
+      const cpuTemperature = document.querySelector("#cpu-temperature");
       let controlsConnected = false;
 
       function setCommandButtonsEnabled(enabled) {
@@ -384,6 +408,16 @@
         batteryIndicator.setAttribute("aria-label", `Battery level ${percentage.toFixed(0)}%`);
       }
 
+      function setCpuTemperature(temperature) {
+        const available = typeof temperature === "number" && Number.isFinite(temperature);
+        cpuTemperature.textContent = available ? `${temperature.toFixed(1)} °C` : "---";
+        cpuTemperature.dataset.available = String(available);
+        cpuTemperature.setAttribute(
+          "aria-label",
+          available ? `CPU temperature ${temperature.toFixed(1)} degrees Celsius` : "CPU temperature unavailable",
+        );
+      }
+
       async function request(path, method = "GET") {
         const response = await fetch(path, { method });
         const result = await response.json();
@@ -398,6 +432,7 @@
         setJobStatus("rc", result.jobs.rc);
         setJobStatus("rc_bag", result.jobs.rc_bag);
         setBatteryStatus(result.statuses.battery_voltage);
+        setCpuTemperature(result.statuses.cpu_temperature_celsius);
       }
 
       async function pollStatus() {
@@ -411,6 +446,7 @@
             button.disabled = true;
           }
           setBatteryStatus(null);
+          setCpuTemperature(null);
           setConnectionStatus(error.message, true);
         }
       }

@@ -525,7 +525,9 @@ defines those aliases.
 
 rc_web also copies html/index.html to /var/www/html to keep the web page up to date.
 The control page displays battery voltage and a level graphic from the ROS
-`/battery_status` topic; the indicator is blank when no recent voltage is available.
+`/battery_status` topic, plus CPU temperature from
+`/sys/class/thermal/thermal_zone0/temp`. Either status is shown as unavailable
+when its sensor value cannot be read.
 
 On first launch the server generates a self-signed HTTPS certificate and
 private key under `~/.local/share/rc-control/`. Open
