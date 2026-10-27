@@ -196,25 +196,25 @@ class NavNode(Node):
     # Enables IMU yaw (compass) from efk_local
     efk_global_odom0_config_yawEn = [
         False, False, False,
-        False, False, True, # compass yaw from efk_local is used
-        True,  False, False,
-        False, False, True,
+        False, False, True,  # yaw from efk_local is used
+        True,  False, False, # x vel from wheel encoder
+        False, False, True,  # yaw vel from imu
         False, False, False
         ]
     # Disables IMU yaw (compass) from efk_local
     efk_global_odom0_config_yawDis = [
         False, False, False,
         False, False, False,
-        True,  False, False,
-        False, False, True,
+        True,  False, False, # x vel from wheel encoder
+        False, False, True,  # yaw vel from imu
         False, False, False
         ]
     # Enables IMU yaw (compass)
     efk_local_imu0_config_yawEn = [
         False, False, False,
-        False, False, True, # Compass IMU yaw is used
+        False, False, True, # IMU yaw magnetic (compass)
         False, False, False,
-        False, False, True,
+        False, False, True, # yaw vel from imu
         False, False, False 
         ]
     # Disables IMU yaw (compass)
@@ -222,7 +222,7 @@ class NavNode(Node):
         False, False, False,
         False, False, False,
         False, False, False,
-        False, False, True,
+        False, False, True,  # yaw vel from imu for steering feedback
         False, False, False 
         ]
         
@@ -262,10 +262,6 @@ class NavNode(Node):
         self.velocity_smoother_set_param_svc = self.create_client(SetParameters, '/velocity_smoother/set_parameters')
         while not self.velocity_smoother_set_param_svc.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('/velocity_smoother/set_parameters service not available, waiting again...')
-
-        # #DEBUG
-        # self.send_set_param_request(self.controller_server_set_param_svc,
-        #             "goal_checker.xy_goal_tolerance", 1.0)
             
         self.cmd_vel_publisher = self.create_publisher(Twist, '/cmd_vel', 10)
 
@@ -532,7 +528,7 @@ class NavNode(Node):
 
         if datum != None :
             self.send_set_param_request(self.navsat_transform_server_set_param_svc,
-                                    "datum",  datum)           
+                                    "datum",  datum, "navsat_transform_server")           
 
         if wpPose != None :
             pose = PoseWithCovarianceStamped()
@@ -597,7 +593,7 @@ class NavNode(Node):
 
         return gps
     
-    def send_set_param_request(self, svc: Client, name, value) -> None:
+    def send_set_param_request(self, svc: Client, name, value, sys: str = "") -> None:
         """
         Set a parameter using the given param service
         command line example:
@@ -633,7 +629,7 @@ class NavNode(Node):
 
         req.parameters.append(param)
 
-        self.get_logger().info(f"send_set_param_request: Sending {name=} {value=}")
+        self.get_logger().info(f"send_set_param_request: Sending {sys=} {name=} {value=}")
         future = svc.call_async(req)
 
         # delay a tiny bit since checking future complete does not seem to work!!!
@@ -710,29 +706,41 @@ class NavNode(Node):
         
         if state == self.T_NAV_WP :
             # configure navigation nodes parameters
-            # change goal tolerance for nav to waypoint
-            # self.send_set_param_request(self.controller_server_set_param_svc,
-            #             "goal_checker.xy_goal_tolerance", self.sm_xy_goal_wp)
 
             # Set which sensors are fused in EFK modules
             if self.wpGps == True :
                 # configure for both compass and gps
-                self.send_set_param_request(self.efk_global_set_param_svc, 
-                            'publish_tf', True)
+                # self.send_set_param_request(self.efk_global_set_param_svc, 
+                #             'publish_tf', True, "efk_global")
+                # self.send_set_param_request(self.efk_local_set_param_svc, 
+                #             'publish_tf', False, "efk_local")
                 self.send_set_param_request(self.efk_global_set_param_svc, # GPS
-                            'odom1_config', self.efk_global_odom1_config_gpsEn)
+                            'odom1_config', self.efk_global_odom1_config_gpsEn, "efk_global")
                 self.send_set_param_request(self.efk_global_set_param_svc, # Compass
-                            'odom0_config', self.efk_global_odom0_config_yawEn)
+                            'odom0_config', self.efk_global_odom0_config_yawEn, "efk_global")
                 self.send_set_param_request(self.efk_local_set_param_svc, # Compass
-                            'imu0_config', self.efk_local_imu0_config_yawEn)
+                            'imu0_config', self.efk_local_imu0_config_yawEn, "efk_local")
                 self.send_set_param_request(self.velocity_smoother_set_param_svc, # Compass
-                            'max_velocity', self.velocity_smoother_max_velocity_wp)
+                            'max_velocity', self.velocity_smoother_max_velocity_wp, "velocity_smoother")
+            else :
+                # self.send_set_param_request(self.efk_global_set_param_svc, 
+                #             'publish_tf', False, "efk_global")
+                # self.send_set_param_request(self.efk_local_set_param_svc, 
+                #             'publish_tf', True, "efk_local")
+                self.send_set_param_request(self.efk_global_set_param_svc, # GPS
+                            'odom1_config', self.efk_global_odom1_config_gpsDis, "efk_global")
+                self.send_set_param_request(self.efk_global_set_param_svc, # Compass
+                            'odom0_config', self.efk_global_odom0_config_yawEn, "efk_global")
+                self.send_set_param_request(self.efk_local_set_param_svc, # Compass
+                            'imu0_config', self.efk_local_imu0_config_yawDis, "efk_local")
+                self.send_set_param_request(self.velocity_smoother_set_param_svc, # Compass
+                            'max_velocity', self.velocity_smoother_max_velocity_wp, "velocity_smoother")
 
             if self.wpCompass == True:
                 self.send_set_param_request(self.efk_global_set_param_svc, # Compass
-                            'imu0_config', self.efk_global_odom0_config_yawEn)
+                            'imu0_config', self.efk_global_odom0_config_yawEn, "efk_global")
                 self.send_set_param_request(self.efk_local_set_param_svc, # Compass
-                            'imu0_config', self.efk_local_imu0_config_yawEn)
+                            'imu0_config', self.efk_local_imu0_config_yawEn, "efk_local")
                     
         elif state == self.T_GOTO_CONE :
             # configure navigation nodes parameters for goto cone
@@ -740,16 +748,16 @@ class NavNode(Node):
             # self.send_set_param_request(self.controller_server_set_param_svc,
             #             "goal_checker.xy_goal_tolerance", self.sm_xy_goal_cone)
             # Set which sensors are fused in EFK modules
-            self.send_set_param_request(self.efk_global_set_param_svc, 
-                        'publish_tf', False)
+            # self.send_set_param_request(self.efk_global_set_param_svc, 
+            #             'publish_tf', False, "efk_global")
             self.send_set_param_request(self.efk_global_set_param_svc, # GPS
-                        'odom1_config', self.efk_global_odom1_config_gpsDis)
+                        'odom1_config', self.efk_global_odom1_config_gpsDis, "efk_global")
             self.send_set_param_request(self.efk_global_set_param_svc, # Compass
-                        'odom0_config', self.efk_global_odom0_config_yawDis)
+                        'odom0_config', self.efk_global_odom0_config_yawDis, "efk_global")
             self.send_set_param_request(self.efk_local_set_param_svc, # Compass
-                        'imu0_config', self.efk_local_imu0_config_yawDis)
+                        'imu0_config', self.efk_local_imu0_config_yawDis, "efk_local")
             self.send_set_param_request(self.velocity_smoother_set_param_svc,
-                        'max_velocity', self.velocity_smoother_max_velocity_cone)
+                        'max_velocity', self.velocity_smoother_max_velocity_cone, "velocity_smoother")
 
     def sm_timer_callback(self):
 

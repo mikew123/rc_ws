@@ -145,9 +145,9 @@ efk_local :
     # use absolute yaw (when differential = false) - needs calibration at startup
     # use x and z acceleration and yaw_vel
     imu0_config: [false, false, false,
-                  true, true, true, # default IMU yaw not used (compass)
+                  false, false, false, # IMU yaw not used (compass)
                   false, false, false,
-                  false, false, false,
+                  false, false, true,  # Use imu angular velocity for steering feedback
                   false, false, false ]
 
     imu0_nodelay: true #false

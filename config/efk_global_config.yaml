@@ -91,9 +91,9 @@ efk_global :
 
     # odom is the efk local fusion of wheel (linear x) and imu (yaw_vel+roll+pitch)
     odom0_config: [false, false, false,
-                   true,  true,  true, # roll + pitch
+                   false,  false,  true, # yaw
                    true,  false, false, # x_vel
-                   false, false, false,  # yaw velocity
+                   false, false, true,  # yaw velocity
                    false, false, false]
 
 

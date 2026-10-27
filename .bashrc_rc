@@ -22,10 +22,19 @@ clear; \
  "sleep 5 ; ros2 launch depthai_descriptions urdf_launch.py" \
  wait ; echo "RC terminated" \
 '
+alias rc_sim=' \
+clear; \
+ export ROS_LOG_DIR=~/sambashare/logs/log-`date +"%m_%d_%Y_%I-%M"` ; \
+ cd ~/rc_ws ; colcon build ; source install/setup.bash ; \
+ parallel --lb ::: \
+ "ros2 launch robocolumbus_stuff sim_launch.py | tee -i ~/sambashare/logs/sim_$(date +"%y_%m_%d_%H_%M").txt" \
+ "ros2 launch rosbridge_server rosbridge_websocket_launch.xml" \
+ "sleep 5 ; ros2 launch depthai_descriptions urdf_launch.py" \
+'
 
 alias rc_bag=' \
 cd ~/sambashare/rosbags ; \
-ros2 bag record -s mcap -b 500000000 \
+ros2 bag record -s mcap \
 --topics /cmd_vel /cmd_vel_smoothed /cmd_vel/teleop \
          /combined_pcd /tof_dist /tof_fc_mid \
          /rc/robot_description /robot_description \
@@ -35,8 +44,10 @@ ros2 bag record -s mcap -b 500000000 \
          /wheel_odom /odom /gps_nav /gps_pose /imu /cmp_azi /imu/cal \
          /odometry/global /odometry/local /odometry/gps /gps/filtered \
          /polygon_stop /polygon_slowdown /optimal_trajectory /plan \
-         /json_msg /color/spatial_detections
+         /json_msg /color/spatial_detections \
+         --storage-config-file ~/rc_ws/mcap-config.yaml
 '
+
 alias rc_web=' \
     cp html/index.html /var/www/html/index.html ; \
     python3 html/control_server.py \

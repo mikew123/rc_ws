@@ -11,7 +11,7 @@
 # '
 
 import yaml
-nav_fname = "config/sambashare-link/nav_files/RoboColumbus.yml"
+nav_fname = "sambashare-link/nav_files/RoboColumbus.yml"
 with open(nav_fname, 'r') as f:
     data = yaml.load(f, Loader=yaml.SafeLoader)
 
@@ -49,54 +49,6 @@ def generate_launch_description():
         robot_desc = infp.read()
 
     return launch.LaunchDescription([
-
-        # ## External launch files: NAV2, SLLIDAR, CONESLAYER
-
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(
-                os.path.join(
-                    nav2_launch_dir,
-                    'bringup_launch.py'
-                )
-            ),
-            launch_arguments={
-                'params_file': 'config/rc_params.yaml',
-                "map": "maps/2000x2000_empty_map.yaml",
-                # "use_localization" : "False",
-                "use_localization" : "True",
-                "goal_checker.xy_goal_tolerance" : f"{xy_goal_tolerance}",
-            }.items()
-        ),
-
-        # IncludeLaunchDescription(
-        #     PythonLaunchDescriptionSource(
-        #         'src/robocolumbus_stuff/launch/noamcl_nav2_launch.py'
-        #     ),
-        #     launch_arguments={
-        #         'params_file': 'config/rc_params.yaml',
-        #         "map": "maps/2000x2000_empty_map.yaml",
-        #         "use_localization" : "False",
-        #         # "use_localization" : "True",
-        #     }.items()
-        # ),
-
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(
-                '../sllidar_ros2/launch/sllidar_s3_launch.py'
-            ),
-            launch_arguments={
-                'frame_id': 'lidar_link'
-            }.items()
-        ),
-
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(
-                '../ros_coneslayer/launch/coneslayer_publisher.launch.py'
-            ),
-            launch_arguments={
-                'namespace': 'coneslayer'
-            }.items()
-        ),
 
 
         #### MY ROBOT RC packages
@@ -225,6 +177,54 @@ def generate_launch_description():
             ],
         ),
 
+        # ## External launch files: NAV2, SLLIDAR, CONESLAYER
+
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                os.path.join(
+                    nav2_launch_dir,
+                    'bringup_launch.py'
+                )
+            ),
+
+            launch_arguments={
+                'params_file': 'config/rc_params.yaml',
+                "map": "maps/2000x2000_empty_map.yaml",
+                # "use_localization" : "False",
+                "use_localization" : "True",
+                "goal_checker.xy_goal_tolerance" : f"{xy_goal_tolerance}",
+            }.items()
+        ),
+
+        # IncludeLaunchDescription(
+        #     PythonLaunchDescriptionSource(
+        #         'src/robocolumbus_stuff/launch/noamcl_nav2_launch.py'
+        #     ),
+        #     launch_arguments={
+        #         'params_file': 'config/rc_params.yaml',
+        #         "map": "maps/2000x2000_empty_map.yaml",
+        #         "use_localization" : "False",
+        #         # "use_localization" : "True",
+        #     }.items()
+        # ),
+
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                '../sllidar_ros2/launch/sllidar_s3_launch.py'
+            ),
+            launch_arguments={
+                'frame_id': 'lidar_link'
+            }.items()
+        ),
+
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                '../ros_coneslayer/launch/coneslayer_publisher.launch.py'
+            ),
+            launch_arguments={
+                'namespace': 'coneslayer'
+            }.items()
+        ),
 
         ### This did not function well, the cmd line launch was added to .bashrc -> works
         # # Bring up rosapi and rosbridge to allow access from visual code and foxglove

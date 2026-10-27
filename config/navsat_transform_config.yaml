@@ -7,7 +7,7 @@ navsat_transform:
     # IMU is calibrated
     magnetic_declination_radians: 0.0
 
-    yaw_offset: 0.0 # Compass is processed to get Est = 0.0
+    yaw_offset: 0.0 # Compass is processed to get East = 0.0
 
     zero_altitude: true
     broadcast_utm_transform: true
