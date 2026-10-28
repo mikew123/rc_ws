@@ -67,11 +67,11 @@ controller_server:
       ax_min: -4.0
       ay_max: 0.0
       az_max: 3.5
-      vx_std: 0.5 #0.2
+      vx_std: 1.0 #0.5 #0.2
       vy_std: 0.2
       wz_std: 0.8 #0.4
-      vx_max: 1.0 
-      vx_min: -1.0
+      vx_max: 1.5 #1.0 
+      vx_min: -1.5 #-1.0
       vy_max: 0.0
       wz_max: 2.0
       iteration_count: 1
@@ -501,8 +501,8 @@ velocity_smoother:
     smoothing_frequency: 20.0 #10.0 #20.0
     scale_velocities: False
     feedback: "OPEN_LOOP" #"CLOSED_LOOP" Closed loop caused 0.1m/s accel/decel
-    max_velocity: [1.0, 0.0, 2.0] #[1.0, 0.0, 2.0]  # 与MPPI配置匹配 (wz_max: 1.9)
-    min_velocity: [-1.0, 0.0, -2.0]  # 支持倒车
+    max_velocity: [1.5, 0.0, 2.0] #[1.0, 0.0, 2.0] #[1.0, 0.0, 2.0]  # 与MPPI配置匹配 (wz_max: 1.9)
+    min_velocity: [-1.5, 0.0, -2.0] #[-1.0, 0.0, -2.0]  # 支持倒车
     max_accel: [1.0, 0.0, 2.0]
     max_decel: [-1.0, 0.0, -2.0]
     odom_topic: "wheel_odom"
