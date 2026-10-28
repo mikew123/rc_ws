@@ -10,6 +10,8 @@ parameters, and coordinates with other nodes via JSON messages.
 """
 # RC25 navigation node
 
+from sympy import Float
+
 import rclpy
 import math
 import time
@@ -23,7 +25,7 @@ from pathlib import Path
 from pprint import pprint, pformat
 
 from rclpy.node import Node
-from std_msgs.msg import String
+from std_msgs.msg import String, Float32
 from geometry_msgs.msg import PointStamped, PoseStamped, PoseWithCovarianceStamped
 from geometry_msgs.msg import Twist, Pose
 from geographic_msgs.msg import GeoPose
@@ -144,6 +146,8 @@ class NavNode(Node):
     cone_at_d_tof_fc:float = 0.0
     cone_at_a_tof_fc:float = 0.0
 
+    cmpAzi:float = 0.0
+
     # median 5 filter memory
     # list of tupples [5X(x,y,z)]
     m5_filter:list = [(0.0,0.0,0.0)]*5
@@ -262,7 +266,11 @@ class NavNode(Node):
         self.velocity_smoother_set_param_svc = self.create_client(SetParameters, '/velocity_smoother/set_parameters')
         while not self.velocity_smoother_set_param_svc.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('/velocity_smoother/set_parameters service not available, waiting again...')
-            
+
+        self.planner_server_set_param_svc = self.create_client(SetParameters, '/planner_server/set_parameters')
+        while not self.planner_server_set_param_svc.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('/planner_server_set_param_svc/set_parameters service not available, waiting again...')
+
         self.cmd_vel_publisher = self.create_publisher(Twist, '/cmd_vel', 10)
 
         self.cone_point_cam_subscription = self.create_subscription(PointStamped, '/cone_point_cam'
@@ -281,6 +289,9 @@ class NavNode(Node):
 
         self.gps_nav_subscription = self.create_subscription(NavSatFix, '/gps_nav'
                                             , self.gps_nav_subscription_callback, 10)
+
+        self.gps_nav_subscription = self.create_subscription(Float32, '/cmp_azi'
+                                            , self.cmp_azi_subscription_callback, 10)
 
         # Message topic to/from all nodes for general messaging Json formated string
         self.json_msg_publisher = self.create_publisher(String, "/json_msg", 10)
@@ -539,6 +550,12 @@ class NavNode(Node):
         self.get_logger().info(f"setupNav: {pose=} {datum=}")
         return True
 
+    def cmp_azi_subscription_callback(self, msg:Float32) -> None :
+        """
+        Cache the orientation direction
+        """
+        self.cmpAzi = msg.data
+
     def gps_nav_subscription_callback(self, msg:NavSatFix) -> None :
         '''
         Save last 10 valid gps [lat,lon,alt]
@@ -714,6 +731,8 @@ class NavNode(Node):
                 #             'publish_tf', True, "efk_global")
                 # self.send_set_param_request(self.efk_local_set_param_svc, 
                 #             'publish_tf', False, "efk_local")
+                self.send_set_param_request(self.planner_server_set_param_svc, 
+                            'GridBased.tolerance', 3.0, "planner_server") 
                 self.send_set_param_request(self.efk_global_set_param_svc, # GPS
                             'odom1_config', self.efk_global_odom1_config_gpsEn, "efk_global")
                 self.send_set_param_request(self.efk_global_set_param_svc, # Compass
@@ -727,6 +746,8 @@ class NavNode(Node):
                 #             'publish_tf', False, "efk_global")
                 # self.send_set_param_request(self.efk_local_set_param_svc, 
                 #             'publish_tf', True, "efk_local")
+                self.send_set_param_request(self.planner_server_set_param_svc, 
+                            'GridBased.tolerance', 0.5, "planner_server") 
                 self.send_set_param_request(self.efk_global_set_param_svc, # GPS
                             'odom1_config', self.efk_global_odom1_config_gpsDis, "efk_global")
                 self.send_set_param_request(self.efk_global_set_param_svc, # Compass
@@ -829,9 +850,11 @@ class NavNode(Node):
                     y = self.wpWaypoint["y"]
                     
                     #TODO: what angle?
-                    a = 0.0
+                    # compute angle to waypoint xy
+                    (wd,wa,_,_,_) = self.get_dist_from_robot(x,y)
+                    a = wa
 
-                    self.get_logger().info(f"Go to way point location {x=} {y=}")
+                    self.get_logger().info(f"Go to way point location dir {wa=:.2f} {wd=:.1f} at {x=:.1f} {y=:.1f}")
                     self.tts(f"Go to waypoint location {x=:.0f} {y=:.0f}")
 
                     goto_pose = self.createPoseStamped(x,y,a,"map")
@@ -1569,12 +1592,12 @@ class NavNode(Node):
 
     #***************************************************************************
 
-    def get_dist_from_robot(self, cx:float, cy:float) -> tuple:
+    def get_dist_from_robot(self, XYx:float, XYy:float) -> tuple:
         """
         return (dist, angle, robot_x, robot_y, robot_angle).
         dist,angle relative to oak-d_frame.
         robot x,y,angle relative to.
-        cx,cy is the cone xy relative to oak-d_frame.
+        XYx,XYy is the target xy coordinate (waypoint cone etc).
         """
         # get current robot pose at tof_fc to determine the angle offset
         (tf_OK, current_pose) = self.getPoseFromTF('map','tof_fc_link')
@@ -1587,12 +1610,12 @@ class NavNode(Node):
                                 current_pose.pose.orientation.z,
                                 current_pose.pose.orientation.w])
 
-        # calc distance from robot(tof_fc) to cone
-        dx = float(cx)
-        dy = float(cy)
-        # Calc angle to target cone XY coordinate
+        # calc distance from robot(tof_fc) to XY
+        dx = float(XYx-rx)
+        dy = float(XYy-ry)
+        # Calc angle to target XY coordinate
         a = math.atan2(dy,dx)
-        # calc distance to target cone
+        # calc distance to target XY
         d = math.sqrt(dx*dx + dy*dy)
 
         return (d, a, rx, ry, ra)
@@ -1799,22 +1822,22 @@ class NavNode(Node):
         # self.get_logger().info(f"tof_fc_callback B: {x=:.3f} {y=:.3f} {a=:.3f} {d=:.3f} ")
         
 
-    def gotoPoseBlocking(self, pose, t):
-        """
-        Go to the pose within in the time limit
-        """
-        self.nav.goToPose(pose)
-        (result, _) = self.waitTaskComplete(t)
+    # def gotoPoseBlocking(self, pose, t):
+    #     """
+    #     Go to the pose within in the time limit
+    #     """
+    #     self.nav.goToPose(pose)
+    #     (result, _) = self.waitTaskComplete(t)
        
-        return result
+    #     return result
 
 
-    def getCurrentPose(self) -> tuple:
-        """
-        get map->tof_fc_link (front center tof sensor) transform
-        returns (tf_OK, pose) pose: PoseStamped
-        """
-        return self.getPoseFromTF('map', 'tof_fc_link')
+    # def getCurrentPose(self) -> tuple:
+    #     """
+    #     get map->base_footprint (rear differential at ground level) transform
+    #     returns (tf_OK, pose) pose: PoseStamped
+    #     """
+    #     return self.getPoseFromTF('map', 'base_footprint')
 
 
     def getPoseFromTF(self, child_frame:str, target_frame:str) -> tuple:
