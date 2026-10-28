@@ -232,7 +232,7 @@ class NavNode(Node):
         
 
     # Velocity when going to way point
-    velocity_smoother_max_velocity_wp = [1.0, 0.0, 2.0]
+    velocity_smoother_max_velocity_wp = [1.5, 0.0, 2.0]
 
     # Velocity when approaching cone
     velocity_smoother_max_velocity_cone = [0.5, 0.0, 1.0]
