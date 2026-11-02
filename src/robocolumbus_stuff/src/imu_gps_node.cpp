@@ -21,6 +21,7 @@
 #include <sensor_msgs/msg/nav_sat_status.hpp>
 #include <std_msgs/msg/float32.hpp>
 #include <std_msgs/msg/string.hpp>
+#include <std_msgs/msg/int32.hpp>
 
 using json = nlohmann::json;
 using namespace std::chrono_literals;
@@ -218,7 +219,9 @@ private:
     message.position_covariance_type = sensor_msgs::msg::NavSatFix::COVARIANCE_TYPE_DIAGONAL_KNOWN;
     gps_publisher_->publish(message);
 
-    gps_siv_publisher_->publish(satellites);
+    std_msgs::msg::Int32 gps_siv;
+    gps_siv.data = satellites;
+    gps_siv_publisher_->publish(gps_siv);
 
   }
 
@@ -379,7 +382,7 @@ private:
   rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr imu_publisher_;
   rclcpp::Publisher<robocolumbus_interfaces::msg::ImuCal>::SharedPtr imu_cal_publisher_;
   rclcpp::Publisher<sensor_msgs::msg::NavSatFix>::SharedPtr gps_publisher_;
-  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr gps_siv_publisher_;
+  rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr gps_siv_publisher_;
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr compass_publisher_;
   rclcpp::TimerBase::SharedPtr serial_timer_;
   rclcpp::TimerBase::SharedPtr startup_timer_;

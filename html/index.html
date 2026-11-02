@@ -213,6 +213,122 @@
         color: #8290a3;
       }
 
+      .siv-indicator,
+      .yaw-indicator {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #edf3fb;
+        font-variant-numeric: tabular-nums;
+        font-weight: 700;
+      }
+
+      .siv-indicator {
+        flex-direction: column;
+      }
+
+      .siv-gauge {
+        display: block;
+        width: min(100%, 220px);
+        overflow: visible;
+      }
+
+      .siv-track,
+      .siv-progress {
+        fill: none;
+        stroke-width: 12;
+        stroke-linecap: round;
+      }
+
+      .siv-track {
+        stroke: #32445a;
+      }
+
+      .siv-progress {
+        stroke: #8290a3;
+        stroke-dasharray: 220;
+        transition: stroke-dashoffset 250ms ease, stroke 250ms ease;
+      }
+
+      .siv-indicator[data-available="true"][data-color="green"] .siv-progress {
+        stroke: #4ade80;
+      }
+
+      .siv-indicator[data-available="true"][data-color="red"] .siv-progress {
+        stroke: #fb7185;
+      }
+
+      .siv-value {
+        fill: currentColor;
+        font-size: 30px;
+        text-anchor: middle;
+      }
+
+      .siv-limit {
+        fill: #a9b8cc;
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .siv-indicator[data-available="false"],
+      .yaw-indicator[data-available="false"] {
+        color: #8290a3;
+      }
+
+      .yaw-indicator {
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .compass-face {
+        width: 180px;
+        max-width: 100%;
+        color: #a9b8cc;
+      }
+
+      .compass-ring {
+        fill: #101b2c;
+        stroke: #52657d;
+        stroke-width: 2;
+      }
+
+      .compass-cardinal {
+        fill: currentColor;
+        font-size: 13px;
+        font-weight: 700;
+        text-anchor: middle;
+        dominant-baseline: middle;
+      }
+
+      .compass-needle {
+        transform-box: view-box;
+        transform-origin: center;
+        transition: transform 250ms ease;
+      }
+
+      .compass-needle path {
+        fill: #8290a3;
+        stroke: #edf3fb;
+        stroke-width: 1.5;
+        stroke-linejoin: round;
+      }
+
+      .yaw-indicator[data-calibration="1"] .compass-needle path {
+        fill: #fb7185;
+      }
+
+      .yaw-indicator[data-calibration="2"] .compass-needle path {
+        fill: #fbbf24;
+      }
+
+      .yaw-indicator[data-calibration="3"] .compass-needle path {
+        fill: #4ade80;
+      }
+
+      .yaw-value {
+        font-size: 1.1rem;
+      }
+
       .card-heading {
         display: flex;
         gap: 12px;
@@ -383,6 +499,61 @@
 
         <article class="control-card">
           <div class="card-heading">
+            <h2>GPS satellites in view</h2>
+          </div>
+          <div
+            class="siv-indicator"
+            id="siv-indicator"
+            data-available="false"
+            role="img"
+            aria-label="GPS satellites in view unavailable"
+          >
+            <svg class="siv-gauge" viewBox="0 0 180 110" aria-hidden="true">
+              <path class="siv-track" pathLength="220" d="M 20 90 A 70 70 0 0 1 160 90"></path>
+              <path
+                class="siv-progress"
+                id="siv-progress"
+                pathLength="220"
+                stroke-dashoffset="220"
+                d="M 20 90 A 70 70 0 0 1 160 90"
+              ></path>
+              <text class="siv-limit" x="20" y="106">5</text>
+              <text class="siv-value" id="siv-value" x="90" y="82">---</text>
+              <text class="siv-limit" x="160" y="106" text-anchor="end">15</text>
+            </svg>
+          </div>
+          <p class="description">Satellite count from <code>/gps_siv</code>. Gauge range: 5–15.</p>
+        </article>
+
+        <article class="control-card">
+          <div class="card-heading">
+            <h2>Yaw compass</h2>
+          </div>
+          <div
+            class="yaw-indicator"
+            id="yaw-indicator"
+            data-available="false"
+            role="img"
+            aria-label="Yaw unavailable"
+          >
+            <svg class="compass-face" viewBox="0 0 200 200" aria-hidden="true">
+              <circle class="compass-ring" cx="100" cy="100" r="82"></circle>
+              <text class="compass-cardinal" x="100" y="31">N</text>
+              <text class="compass-cardinal" x="169" y="100">E</text>
+              <text class="compass-cardinal" x="100" y="169">S</text>
+              <text class="compass-cardinal" x="31" y="100">W</text>
+              <g class="compass-needle" id="yaw-needle" style="transform: rotate(90deg)">
+                <path d="M 100 43 L 111 108 L 100 97 L 89 108 Z"></path>
+              </g>
+              <circle cx="100" cy="100" r="5" fill="#edf3fb"></circle>
+            </svg>
+            <span class="yaw-value" id="yaw-value">---</span>
+          </div>
+          <p class="description">Azimuth from <code>/cmp_azi</code>: 0 is East, +π/2 is North, and ±π is West.</p>
+        </article>
+
+        <article class="control-card">
+          <div class="card-heading">
             <h2>Robot bringup</h2>
             <span class="status" id="rc-status">Unknown</span>
           </div>
@@ -445,6 +616,12 @@
       const cpuTemperature = document.querySelector("#cpu-temperature");
       const temperatureFill = document.querySelector("#temperature-fill");
       const temperatureValue = document.querySelector("#temperature-value");
+      const sivIndicator = document.querySelector("#siv-indicator");
+      const sivProgress = document.querySelector("#siv-progress");
+      const sivValue = document.querySelector("#siv-value");
+      const yawIndicator = document.querySelector("#yaw-indicator");
+      const yawNeedle = document.querySelector("#yaw-needle");
+      const yawValue = document.querySelector("#yaw-value");
       let controlsConnected = false;
 
       function setCommandButtonsEnabled(enabled) {
@@ -520,6 +697,49 @@
         );
       }
 
+      function setGpsSiv(siv) {
+        const available = Number.isInteger(siv);
+        sivIndicator.dataset.available = String(available);
+        if (!available) {
+          sivValue.textContent = "---";
+          sivProgress.style.strokeDashoffset = "220";
+          sivIndicator.removeAttribute("data-color");
+          sivIndicator.setAttribute("aria-label", "GPS satellites in view unavailable");
+          return;
+        }
+
+        const percentage = Math.max(0, Math.min(1, (siv - 5) / 10));
+        sivValue.textContent = String(siv);
+        sivProgress.style.strokeDashoffset = String(220 * (1 - percentage));
+        sivIndicator.dataset.color = siv >= 5 && siv <= 15 ? "green" : "red";
+        sivIndicator.setAttribute("aria-label", `${siv} GPS satellites in view`);
+      }
+
+      function setYaw(yaw) {
+        const available = typeof yaw === "number" && Number.isFinite(yaw);
+        yawIndicator.dataset.available = String(available);
+        if (!available) {
+          yawValue.textContent = "---";
+          yawNeedle.style.transform = "rotate(90deg)";
+          yawIndicator.setAttribute("aria-label", "Yaw unavailable");
+          return;
+        }
+
+        const degrees = yaw * 180 / Math.PI;
+        const rotation = 90 - degrees;
+        yawValue.textContent = `${yaw.toFixed(2)} rad`;
+        yawNeedle.style.transform = `rotate(${rotation}deg)`;
+        yawIndicator.setAttribute("aria-label", `Yaw ${yaw.toFixed(2)} radians`);
+      }
+
+      function setImuCalibration(calibration) {
+        if (Number.isInteger(calibration) && calibration >= 0 && calibration <= 3) {
+          yawIndicator.dataset.calibration = String(calibration);
+        } else {
+          yawIndicator.removeAttribute("data-calibration");
+        }
+      }
+
       async function request(path, method = "GET") {
         const response = await fetch(path, { method });
         const result = await response.json();
@@ -535,6 +755,9 @@
         setJobStatus("rc_bag", result.jobs.rc_bag);
         setBatteryStatus(result.statuses.battery_voltage);
         setCpuTemperature(result.statuses.cpu_temperature_celsius);
+        setGpsSiv(result.statuses.gps_siv);
+        setYaw(result.statuses.cmp_azi);
+        setImuCalibration(result.statuses.imu_cal_rvec);
       }
 
       async function pollStatus() {
@@ -549,6 +772,9 @@
           }
           setBatteryStatus(null);
           setCpuTemperature(null);
+          setGpsSiv(null);
+          setYaw(null);
+          setImuCalibration(null);
           setConnectionStatus(error.message, true);
         }
       }

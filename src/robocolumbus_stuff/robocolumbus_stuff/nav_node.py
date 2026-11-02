@@ -577,7 +577,7 @@ class NavNode(Node):
         """
         Number of satelites in view detected
         """
-        self.gpsSiv = siv
+        self.gpsSiv = siv.data
 
     gpsCurrentLen = 9
 
@@ -588,7 +588,8 @@ class NavNode(Node):
         NOTE: yaw is from imu/compass
         Clear list when gps invalid (low sat count) occurs
         '''
-        lowSatCnt = 5
+
+        lowSatCnt:int = 5
         maxLen = self.gpsCurrentLen
 
         # Get the number of satelites in view

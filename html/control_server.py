@@ -30,13 +30,21 @@ jobs_lock = threading.Lock()
 
 
 class RosTopicFieldReader:
-    def __init__(self, topic: str, field: str) -> None:
+    def __init__(
+        self,
+        topic: str,
+        field: str,
+        value_type: type[int] | type[float] = float,
+        positive_only: bool = False,
+    ) -> None:
         self.command = ["ros2", "topic", "echo", topic, "--field", field]
+        self.value_type = value_type
+        self.positive_only = positive_only
         self._stop_event = threading.Event()
         self._process_lock = threading.Lock()
         self._value_lock = threading.Lock()
         self._process: subprocess.Popen[str] | None = None
-        self._value: float | None = None
+        self._value: int | float | None = None
         self._value_time: float | None = None
         self._thread = threading.Thread(
             target=self._run,
@@ -61,7 +69,7 @@ class RosTopicFieldReader:
             process.kill()
             self._thread.join(timeout=2)
 
-    def value(self) -> float | None:
+    def value(self) -> int | float | None:
         with self._value_lock:
             if self._value_time is None or time.monotonic() - self._value_time > 3:
                 return None
@@ -125,23 +133,30 @@ class RosTopicFieldReader:
         if line.strip() == "---":
             return
         try:
-            voltage = float(line.strip())
+            value = self.value_type(line.strip())
         except ValueError:
             if line.strip():
                 logging.warning("Ignoring invalid ROS topic value: %r", line.strip())
             return
 
         with self._value_lock:
-            if not math.isfinite(voltage) or voltage <= 0:
+            if (
+                isinstance(value, float) and not math.isfinite(value)
+            ) or (self.positive_only and value <= 0):
                 self._value = None
                 self._value_time = None
             else:
-                self._value = voltage
+                self._value = value
                 self._value_time = time.monotonic()
 
 
 status_readers = {
-    "battery_voltage": RosTopicFieldReader("/battery_status", "voltage"),
+    "battery_voltage": RosTopicFieldReader(
+        "/battery_status", "voltage", positive_only=True
+    ),
+    "gps_siv": RosTopicFieldReader("/gps_siv", "data", value_type=int),
+    "cmp_azi": RosTopicFieldReader("/cmp_azi", "data"),
+    "imu_cal_rvec": RosTopicFieldReader("/imu/cal", "rvec", value_type=int),
 }
 
 

@@ -41,7 +41,7 @@ ros2 bag record -s mcap \
          /battery_status /tf /tf_static /cone_point_cam /cone_point_lidar \
          /global_costmap/costmap /local_costmap/costmap \
          /scan /tof_fc /tof_fl /tof_fr /tof_rc /tof_rl /tof_rr \
-         /wheel_odom /odom /gps_nav /gps_pose /imu /cmp_azi /imu/cal \
+         /wheel_odom /odom /gps_nav /gps_siv /gps_pose /imu /cmp_azi /imu/cal \
          /odometry/global /odometry/local /odometry/gps /gps/filtered \
          /polygon_stop /polygon_slowdown /optimal_trajectory /plan \
          /json_msg /color/spatial_detections \
