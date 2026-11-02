@@ -1634,13 +1634,18 @@ class NavNode(Node):
 
     #***************************************************************************
 
-    def get_dist_from_robot(self, XYx:float, XYy:float) -> tuple:
+    def get_dist_from_robot(self, Tx:float, Ty:float) -> tuple:
         """
         return (dist, angle, robot_x, robot_y, robot_angle).
-        dist,angle relative to oak-d_frame.
-        robot x,y,angle relative to.
-        XYx,XYy is the target xy coordinate (waypoint cone etc).
+        input Tx,Ty is the target xy coordinate (waypoint cone etc).
+        output dist,angle is relative to robot tof_fc.
+        robot x,y,angle on map relative to tof_fc.
         """
+        
+        # calc distance from robot to Target (not absolute xy but relative to tof_fc)
+        d = math.sqrt(Tx*Tx + Ty*Ty)
+        a = math.atan2(Ty,Tx)
+
         # get current robot pose at tof_fc to determine the angle offset
         (tf_OK, current_pose) = self.getPoseFromTF('map','tof_fc_link')
         if not tf_OK : return -1.0
@@ -1651,14 +1656,6 @@ class NavNode(Node):
                                 current_pose.pose.orientation.y,
                                 current_pose.pose.orientation.z,
                                 current_pose.pose.orientation.w])
-
-        # calc distance from robot(tof_fc) to XY
-        dx = float(XYx-rx)
-        dy = float(XYy-ry)
-        # Calc angle to target XY coordinate
-        a = math.atan2(dy,dx)
-        # calc distance to target XY
-        d = math.sqrt(dx*dx + dy*dy)
 
         return (d, a, rx, ry, ra)
 
@@ -1677,15 +1674,15 @@ class NavNode(Node):
             
             (cd, ca, rx, ry, ra) = self.get_dist_from_robot(cx, cy)
 
-            self.get_logger().info(f"gotoConeXY: robot at {rx=:.3f} {ry=:.3f}, {ra=:.3f} cone at {cx=:.3f} {cy=:.3f} {cd=:.3f} {ca=:.3f}")
+            self.get_logger().info(f"gotoConeXY: robot at {rx=:.3f} {ry=:.3f}, {ra=:.3f} cone at relative {cx=:.3f} {cy=:.3f} {cd=:.3f} {ca=:.3f}")
 
-            d = cd
-            if d < stop_dist : return d
+            if cd < stop_dist : return cd
 
+            # calculate using cone dist and angle since we need to stop navigating before cone location 
             # calc angle from "map" to cone to drive with heading direct to cone
             a = ra + ca
             # adjust the distance stop at the cost map boundary
-            sd = d - stop_dist
+            sd = cd - stop_dist
             # calc goto coordinates x,y for "map"->cone
             x = rx + sd*math.cos(a)
             y = ry + sd*math.sin(a)
@@ -1699,9 +1696,9 @@ class NavNode(Node):
 
         else :
             self.get_logger().info(f"gotoXY: No cone detected")
-            d=-1.0
+            cd=-1.0
 
-        return float(d)
+        return float(cd)
 
 
 
