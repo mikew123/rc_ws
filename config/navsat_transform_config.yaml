@@ -6,7 +6,6 @@ navsat_transform:
 
     # IMU is calibrated
     magnetic_declination_radians: 0.0
-
     yaw_offset: 0.0 # Compass is processed to get East = 0.0
 
     zero_altitude: true
@@ -16,4 +15,4 @@ navsat_transform:
     wait_for_datum: true # ? does not seem to wait 
     # If not set to gps close (default set to 0,0,0) the nav2 code errors and does not start
     # I set a approx GPS here and then set the datum param with accurate current GPS
-    datum: [32.7702773,  -96.8377211, 0.0] # [lat, lon, alt]
+    datum: [32.77024839,  -96.83774057, 0.0] # [lat, lon, yaw 0=East]

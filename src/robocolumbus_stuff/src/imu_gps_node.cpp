@@ -42,6 +42,7 @@ public:
     imu_publisher_ = create_publisher<sensor_msgs::msg::Imu>("imu", 10);
     imu_cal_publisher_ = create_publisher<robocolumbus_interfaces::msg::ImuCal>("imu/cal", 10);
     gps_publisher_ = create_publisher<sensor_msgs::msg::NavSatFix>("gps_nav", 10);
+    gps_siv_publisher_ = create_publisher<std_msgs::msg::Int32>("gps_siv", 10);
     compass_publisher_ = create_publisher<std_msgs::msg::Float32>("cmp_azi", 10);
 
     serial_timer_ = create_wall_timer(10ms, std::bind(&ImuGpsNode::serial_timer_callback, this));
@@ -201,13 +202,13 @@ private:
     const int satellites = packet.value("siv", 0);
     if (status && satellites >= kMinimumSatellites) {
       message.status.status = sensor_msgs::msg::NavSatStatus::STATUS_FIX;
-      message.status.service = satellites;
+      message.status.service = 1 | 8 ; // GPS + Galileo
       message.latitude = 1e-7 * packet.value("lat", 0.0);
       message.longitude = 1e-7 * packet.value("lon", 0.0);
       message.altitude = 1e-3 * packet.value("alt", 0.0);
     } else {
       message.status.status = sensor_msgs::msg::NavSatStatus::STATUS_NO_FIX;
-      message.status.service = satellites;
+      message.status.service = 0; 
       message.latitude = std::nan("");
       message.longitude = std::nan("");
       message.altitude = std::nan("");
@@ -216,6 +217,9 @@ private:
     message.position_covariance = kGpsCovariance;
     message.position_covariance_type = sensor_msgs::msg::NavSatFix::COVARIANCE_TYPE_DIAGONAL_KNOWN;
     gps_publisher_->publish(message);
+
+    gps_siv_publisher_->publish(satellites);
+
   }
 
   double median5_filter(double value, std::vector<double> & history)
@@ -375,6 +379,7 @@ private:
   rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr imu_publisher_;
   rclcpp::Publisher<robocolumbus_interfaces::msg::ImuCal>::SharedPtr imu_cal_publisher_;
   rclcpp::Publisher<sensor_msgs::msg::NavSatFix>::SharedPtr gps_publisher_;
+  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr gps_siv_publisher_;
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr compass_publisher_;
   rclcpp::TimerBase::SharedPtr serial_timer_;
   rclcpp::TimerBase::SharedPtr startup_timer_;

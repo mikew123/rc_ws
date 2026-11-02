@@ -25,7 +25,7 @@ from pathlib import Path
 from pprint import pprint, pformat
 
 from rclpy.node import Node
-from std_msgs.msg import String, Float32
+from std_msgs.msg import String, Float32, Int32
 from geometry_msgs.msg import PointStamped, PoseStamped, PoseWithCovarianceStamped
 from geometry_msgs.msg import Twist, Pose
 from geographic_msgs.msg import GeoPose
@@ -146,7 +146,11 @@ class NavNode(Node):
     cone_at_d_tof_fc:float = 0.0
     cone_at_a_tof_fc:float = 0.0
 
+    # Heading / YAW from IMU/Compass
     cmpAzi:float = 0.0
+
+    # Number of GPS satelites in view
+    gpsSiv:int = 0
 
     # median 5 filter memory
     # list of tupples [5X(x,y,z)]
@@ -289,6 +293,8 @@ class NavNode(Node):
 
         self.gps_nav_subscription = self.create_subscription(NavSatFix, '/gps_nav'
                                             , self.gps_nav_subscription_callback, 10)
+        self.gps_siv_subscription = self.create_subscription(Int32, '/gps_siv'
+                                            , self.gps_siv_subscription_callback, 10)
 
         self.gps_nav_subscription = self.create_subscription(Float32, '/cmp_azi'
                                             , self.cmp_azi_subscription_callback, 10)
@@ -474,34 +480,44 @@ class NavNode(Node):
             if wpDatum != None :
                 if not (("lat" in wpDatum) and ("lon" in wpDatum)) :
                     # get datum lat,lon current location from gps signal
+                    if stateChange :
+                        self.get_logger().info(f"setupNav: Get current gps for the datum")
+                        self.tts("Get current gps for the datum")
+
                     datum = self.getCurrentGps()
                     if datum == None :
                         # wait for filtered GPS datum
                         return False
+                    
+                    self.get_logger().info(f"setupNav: Use current gps as {datum=}")
+                    self.tts("use current gps datum lat={datum[0]:.0f} lon={datum[1]:.0f} yaw={datum[2]:.2f}")
+
                 else :
                     # use datum in wp file
+                    if stateChange :
+                        self.get_logger().info(f"setupNav: Get datum from file {wpDatum=}")
                     datum = [
                         wpDatum["lat"],
                         wpDatum["lon"],
-                        0.0 # altitude?
+                        0.0 # yaw 0=East
                     ] 
             else : # no datum data in waypoint file
                 # get datum lat,lon current location from gps signal
                 if stateChange :
                     self.get_logger().info(f"setupNav: Get current gps for the datum")
                     self.tts("Get current gps for the datum")
-                datum = self.getCurrentGps()
 
+                datum = self.getCurrentGps()
                 if datum == None :
                     # wait for filtered GPS datum
                     return False
 
                 self.get_logger().info(f"setupNav: Use current gps as {datum=}")
-                self.tts("use current gps datum lat={datum[0]:.0f} lon={datum[1]:.0f}")
+                self.tts("use current gps datum lat={datum[0]:.0f} lon={datum[1]:.0f} yaw={datum[2]:.2f}")
 
             # create pose x,y,yaw from datum lat/lon and compass
             #TODO: get compass yaw, should we use a datum yaw if given?
-            x, y, rad = 0.0, 0.0, None # defaults
+            x, y, yaw = 0.0, 0.0, None # defaults
 
             if wpPose != None :
                 if ("x" in wpPose) and ("y" in wpPose) :
@@ -510,25 +526,26 @@ class NavNode(Node):
 
                 # get yaw to use in pose
                 if "rad" in wpPose :
-                    rad = wpPose["rad"]
+                    yaw = wpPose["rad"]
                 elif "deg" in wpPose :
-                    rad = wpPose["deg"]/180.0 * math.pi
+                    yaw = wpPose["deg"]/180.0 * math.pi
 
             # alternate sources of pose yaw
-            if rad == None :
+            if yaw == None :
                 if wpDatum != None :
                     if "rad" in wpDatum :
-                        rad = wpDatum["rad"]
+                        yaw = wpDatum["rad"]
                     elif "deg" in wpDatum :
-                        rad = wpDatum["deg"]/180.0 * math.pi
-            if rad == None :
+                        yaw = wpDatum["deg"]/180.0 * math.pi
+            if yaw == None :
                 if self.wpCompass == True :
                     # TODO: get yaw from compass
-                    rad = 0.0
+                    # yaw = 0.0
+                    yaw = self.cmpAzi
             else :
-                rad = 0.0
+                yaw = 0.0
 
-            wpPose = {"x":x,"y":y,"rad":rad}
+            wpPose = {"x":x,"y":y,"rad":yaw}
 
         if wpPose == None :
             wpPose = {"x":0.0,"y":0.0,"rad":0.0}
@@ -556,29 +573,52 @@ class NavNode(Node):
         """
         self.cmpAzi = msg.data
 
+    def gps_siv_subscription_callback(self, siv:Int32) -> None :
+        """
+        Number of satelites in view detected
+        """
+        self.gpsSiv = siv
+
+    gpsCurrentLen = 9
+
     def gps_nav_subscription_callback(self, msg:NavSatFix) -> None :
         '''
-        Save last 10 valid gps [lat,lon,alt]
-        Clear list when gps invalid occurs
+        Save last N valid gps [lat,lon,yaw]
+        N should be odd number for median filtering
+        NOTE: yaw is from imu/compass
+        Clear list when gps invalid (low sat count) occurs
         '''
-        siv = msg.status.service # service used for num sat in view
-        if siv < 5 :
+        lowSatCnt = 5
+        maxLen = self.gpsCurrentLen
+
+        # Get the number of satelites in view
+        # NOTE: status.service is not defined for siv, but currently used
+        # siv = msg.status.service # service used for num sat in view
+        siv = self.gpsSiv
+        if siv < lowSatCnt :
             self.gpsCurrent = None
             return
-        
+
+        # initialize list when gps data is starting to be collected
         if self.gpsCurrent == None :
             self.gpsCurrent = []
 
         lat = msg.latitude
         lon = msg.longitude
-        alt = msg.altitude
+        # alt = msg.altitude
+        # YAW from IMU/compass cache
+        yaw = 0.0 #self.cmpAzi
 
-        self.gpsCurrent.append([lat,lon,alt])
+        # limit the list length before saving in cache
+        if len(self.gpsCurrent) > maxLen :
+            self.gpsCurrent.pop(0)
+
+        self.gpsCurrent.append([lat,lon,yaw])
 
     def getCurrentGps(self) -> list[float] :
         '''
         Use median filter for gps data
-        Return filtered gps [lat, lon, alt] when available
+        Return filtered gps [lat, lon, yaw] when available
         Else return None
         '''
 
@@ -586,27 +626,27 @@ class NavNode(Node):
 
         if curGps == None : 
             return None
-            
-        curGpsLen = len(curGps)
-        if curGpsLen < 10 :
-            return None
         
-        # Filter the last 10 GPS values
+        # Filter the last N GPS values
         lats:list[float] = []
         lons:list[float] = []
-        alts:list[float] = []
+        yaws:list[float] = []
         gps:list[float]
         for gps in curGps :
             lats.append(gps[0])
             lons.append(gps[1])
-            alts.append(gps[2])
-
+            yaws.append(gps[2])
+            
+        curGpsLen = len(curGps)
+        if curGpsLen < self.gpsCurrentLen :
+            return None
+        
         # Median filter by selecting the sorted mid value
         lats.sort()
         lons.sort()
-        alts.sort()
-        mid = int(curGpsLen/2)
-        gps = [lats[mid ],lons[mid],alts[mid]]
+        yaws.sort()
+        mid = int(curGpsLen/2) +1
+        gps = [lats[mid ],lons[mid],yaws[mid]]
 
         return gps
     
@@ -817,6 +857,7 @@ class NavNode(Node):
                 next_state = self.T_SETUP_NAV
 
         if state == self.T_SETUP_NAV :
+            # Continue setup until True is returned
             if self.setupNav(stateChange) :
                 next_state = self.T_GET_WP
 

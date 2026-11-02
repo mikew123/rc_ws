@@ -165,7 +165,11 @@ def generate_launch_description():
             package='robot_localization',
             executable='navsat_transform_node',
             name='navsat_transform',
-            parameters=['config/navsat_transform_config.yaml'],
+            parameters=[
+                'config/navsat_transform_config.yaml',
+                {"datum": [32.77024839,  -96.83774057, 0.0]} # Home 0.0 = East
+                # {"datum": [32.7702773,  -96.8377211, 0.0]} # Competition
+            ],
             remappings=[
                 # input topics
                 ("imu/data", "imu"),
