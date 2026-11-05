@@ -10,7 +10,7 @@ parameters, and coordinates with other nodes via JSON messages.
 """
 # RC25 navigation node
 
-from sympy import Float
+from sympy import Float, false
 
 import rclpy
 import math
@@ -173,7 +173,10 @@ class NavNode(Node):
     wpWaypoints:dict  = None
     wpWaypoint:dict   = None
     wpWaypointNum:int = 1 # First waypoint number
-    wpCone:bool       = False
+
+    wpConeTrue:bool    = False
+    wpCone:dict        = None
+    wpConeTouched:dict = {}
 
     # sm_last_state = -1
 
@@ -820,6 +823,8 @@ class NavNode(Node):
                         'imu0_config', self.efk_local_imu0_config_yawDis, "efk_local")
             self.send_set_param_request(self.velocity_smoother_set_param_svc,
                         'max_velocity', self.velocity_smoother_max_velocity_cone, "velocity_smoother")
+            
+    last_touched_cone_close_true:bool = False
 
     def sm_timer_callback(self):
 
@@ -835,6 +840,7 @@ class NavNode(Node):
         state = next_state
         self.tc_state = state
 
+        # T_INIT_WAIT
         if state == self.T_INIT_WAIT :
             self.tts("wait for nav 2")
             time.sleep(20)
@@ -844,7 +850,8 @@ class NavNode(Node):
                 next_state = self.T_CAL_IMU
             else :
                 next_state = self.T_WAIT_GO
-                    
+
+        # T_CAL_IMU
         if state == self.T_CAL_IMU :
             # Calibrate IMU when compass is used
             status = self.calImu()
@@ -852,25 +859,30 @@ class NavNode(Node):
                 #  calibration complete
                 next_state = self.T_WAIT_GO
 
+        # T_WAIT_GO
         if state == self.T_WAIT_GO :
             # Wait for go command from button
             if self.waitGo() :
                 next_state = self.T_SETUP_NAV
 
+        # T_SETUP_NAV
         if state == self.T_SETUP_NAV :
             # Continue setup until True is returned
             if self.setupNav(stateChange) :
                 next_state = self.T_GET_WP
 
+        # T_GET_WP
         elif state == self.T_GET_WP :        
             if self.getNextWaypoint() :
                 next_state = self.T_NAV_WP
             else :
                 next_state = self.T_DONE
-        
+
+        # T_NAV_WP_AGAIN
         elif state == self.T_NAV_WP_AGAIN :
             next_state = self.T_NAV_WP
 
+        # T_NAV_WP
         elif state == self.T_NAV_WP :
             if stateChange :
                 self.get_logger().info(f"T_NAV_WP: next {self.wpWaypoint=}")
@@ -882,9 +894,10 @@ class NavNode(Node):
                 # execute goto waypoint once
                 x = 0.0 # default
                 y = 0.0
-                self.wpCone = False # default
+                self.wpConeTrue = false # default
                 if "cone" in self.wpWaypoint :
-                    self.wpCone = self.wpWaypoint["cone"]
+                    self.wpConeTrue = self.wpWaypoint["cone"]
+                    self.wpCone     = self.wpWaypoint
 
                 if ("x" in self.wpWaypoint) and ("y" in self.wpWaypoint) :
                     # map based XY location
@@ -896,7 +909,7 @@ class NavNode(Node):
                     (wd,wa,_,_,_) = self.get_dist_from_robot(x,y)
                     a = wa
 
-                    self.get_logger().info(f"Go to way point location dir {wa=:.2f} {wd=:.1f} at {x=:.1f} {y=:.1f}")
+                    self.get_logger().info(f"T_NAV_WP: Go to way point location dir {wa=:.2f} {wd=:.1f} at {x=:.1f} {y=:.1f}")
                     self.tts(f"Go to waypoint location {x=:.0f} {y=:.0f}")
 
                     goto_pose = self.createPoseStamped(x,y,a,"map")
@@ -905,20 +918,23 @@ class NavNode(Node):
                 else :
                     # invalid waypoint, get next
                     next_state = self.T_GET_WP
-
+                    return
+                
             #TODO: timeout + kill switch
 
-            # Stop gotoPose and find detected cone
-            if self.wpCone and (self.cone_det_cam_true_cnt > 4) :
+
+            # quit nav to cone waypoint if a cone is detected and it is not close to the last touched cone
+            if self.wpConeTrue and self.cone_det_cam_true and (not self.last_touched_cone_close_true) :
                 if self.cancelNav2Task() :
                     self.tts("Cone detected while navigating to waypoint")
+                    # self.wpConeTouched = {}
                     next_state = self.T_GOTO_CONE
 
             elif self.nav.isTaskComplete() :
                 result = self.nav.getResult()
                 if result == TaskResult.SUCCEEDED :
                     self.tts("Navigate to way point location is successfull")
-                    if self.wpCone :
+                    if self.wpConeTrue :
                         # Find cone close to the way point
                         next_state = self.T_GOTO_CONE
                     else :
@@ -930,23 +946,8 @@ class NavNode(Node):
                     self.tts("Attempt to navigate to way point location again")
                     # next_state = self.T_WAIT_REQ
                     next_state = self.T_NAV_WP_AGAIN
-            
-            # # TODO: test dist measured to wp is close then check for cone
-            # else :
-            #     if self.wpCone :
-            #         # result = self.nav.getFeedback()
-            #         # self.get_logger().info(f"sm_timer_callback: gotoPose {state=} {result=}")
-            #         # trav_time_rem = Duration.from_msg(result.estimated_time_remaining).nanoseconds / 1e9
-            #         wpx = self.wpWaypoint["x"]
-            #         wpy = self.wpWaypoint["y"]
-            #         (dist,_,_,_,_) = self.get_dist_from_robot(wpx, wpy)
-            #         dist:float = self.cone_at_d_cam
-            #         if (dist < 5.0) and (dist > 1.0) :
-            #             # cone detected 
-            #             self.cancelNav2Task()
-            #             next_state = self.T_GOTO_CONE
-                    
 
+        # T_GOTO_CONE
         elif state == self.T_GOTO_CONE :
             if stateChange :
                 self.tts(f"Go to the cone")
@@ -958,8 +959,15 @@ class NavNode(Node):
                 #go request next cone location
                 self.get_logger().info(f"tc: done - touch cone succeeded")
                 self.tts("cone was touched")
+                # save touched cone actual XY location not waypoint
+                current_pose:PoseStamped = None
+                (tf_OK, current_pose) = self.getPoseFromTF('map','tof_fc_link')
+                if tf_OK :
+                    self.wpConeTouched["x"] = current_pose.pose.position.x
+                    self.wpConeTouched["y"] = current_pose.pose.position.y
                 next_state = self.T_GET_WP
 
+        # T_DONE
         elif state == self.T_DONE :
             if stateChange :
                 self.get_logger().info(f"T_DONE: Finished")
@@ -1329,9 +1337,8 @@ class NavNode(Node):
         killSwitchActive:bool  = ks
         next_state:int = state
 
-        # TODO: Use cone_det_cam_true_cnt??
         # if x!=0 and y<0.10 and y>-0.10:
-        if self.cone_det_cam_true_cnt > 4 :
+        if self.cone_det_cam_true:
             # A cone has been detected
             self.get_logger().info(f"{func} cone detected at {x=:.3f} {y=:.3f}  {state=} {killSwitchActive=}")
             #stop movement
@@ -1386,8 +1393,9 @@ class NavNode(Node):
         killSwitchChange = ksc
         next_state = state
 
+
         if x != 0 :
-            dist = self.cd_cone_stop_dist
+            stopDist = self.cd_cone_stop_dist
             t = self.cd_cone_nav_time
 
             # non-blocking navigation
@@ -1396,7 +1404,7 @@ class NavNode(Node):
                     # issue a navigation command
                     # x,y is relative to tof_fc sensor
                     if self.nav.isTaskComplete() :
-                        self.gotoConeXY(x,y,dist,t) # non-blocking
+                        self.gotoConeXY(x,y,stopDist,t) # non-blocking
                         self.cd_sub_timer = cur_time
                         self.cd_sub_state = 1
 
@@ -1413,7 +1421,7 @@ class NavNode(Node):
                             # x,y is relative to tof_fc sensor
                             d = math.sqrt(x*x + y*y)
 
-                            if d <= dist + 0.1 :
+                            if d <= stopDist + 0.1 :
                                 self.get_logger().info(f"{func} nav done - close to cone {d=:.3f} {state=}")
                                 next_state = 2
                             else :
@@ -1637,14 +1645,11 @@ class NavNode(Node):
     def get_dist_from_robot(self, Tx:float, Ty:float) -> tuple:
         """
         return (dist, angle, robot_x, robot_y, robot_angle).
-        input Tx,Ty is the target xy coordinate (waypoint cone etc).
+        input Tx,Ty is the target map xy coordinate (waypoint cone etc).
         output dist,angle is relative to robot tof_fc.
         robot x,y,angle on map relative to tof_fc.
         """
-        
-        # calc distance from robot to Target (not absolute xy but relative to tof_fc)
-        d = math.sqrt(Tx*Tx + Ty*Ty)
-        a = math.atan2(Ty,Tx)
+
 
         # get current robot pose at tof_fc to determine the angle offset
         (tf_OK, current_pose) = self.getPoseFromTF('map','tof_fc_link')
@@ -1656,6 +1661,12 @@ class NavNode(Node):
                                 current_pose.pose.orientation.y,
                                 current_pose.pose.orientation.z,
                                 current_pose.pose.orientation.w])
+
+        # calc distance from robot to Target (not absolute xy but relative to tof_fc)
+        dx = Tx - rx
+        dy = Ty - ry
+        d = math.sqrt(dx*dx + dy*dy)
+        a = math.atan2(dy,dx)
 
         return (d, a, rx, ry, ra)
 
@@ -1672,7 +1683,9 @@ class NavNode(Node):
         if cx!=0 and cy!=0 :
             # self.get_logger().info(f"gotoConeXY: cone at {cx=:.3f} {cy=:.3f}")
             
-            (cd, ca, rx, ry, ra) = self.get_dist_from_robot(cx, cy)
+            (_, _, rx, ry, ra) = self.get_dist_from_robot(cx, cy)
+            cd = math.sqrt(cx*cx + cy*cy)
+            ca = math.atan2(cy,cx)
 
             self.get_logger().info(f"gotoConeXY: robot at {rx=:.3f} {ry=:.3f}, {ra=:.3f} cone at relative {cx=:.3f} {cy=:.3f} {cd=:.3f} {ca=:.3f}")
 
@@ -1706,9 +1719,19 @@ class NavNode(Node):
 
     # TODO: globals to be moved to begining of file
     cone_det_cam_true_cnt:int = 0
-    cone_det_cam_false_cnt:int = 0
+    cone_det_cam_true_cnt_thr:int = 4
+    cone_det_cam_true_cnt_max:int = 8
+
+    cone_det_cam_true:bool = False     
+    """filtered cone detection is true"""
+
 
     def cone_point_cam_subscription_callback(self, msg: PointStamped) -> None:
+        """
+        Detect cone using the camera
+        X Y Dist in msg is relative to the camera position "oak_d_frame"
+        """
+        
         # if msg.point.x == 0 : self.get_logger().info(f"{msg=}")
         x = msg.point.x
         y = msg.point.y
@@ -1717,21 +1740,87 @@ class NavNode(Node):
         a = math.atan2(y,x)
         d = math.sqrt(x*x + y*y)
 
-        # transform cone xy to "/tof_fc_link" which is considered the front of the robot
+        # TF cone xy relative to "/tof_fc_link" which is considered the front of the robot
         self.cone_at_x_cam = x
         self.cone_at_y_cam = y
         self.cone_at_d_cam = d
         self.cone_at_a_cam = a
         self.cone_det_time_cam = t
 
-        # count consecutive cone detections
-        if self.cone_at_d_cam > 0 :
-            self.cone_det_cam_true_cnt += 1
-            self.cone_det_cam_false_cnt = 0
-        else :
-            self.cone_det_cam_true_cnt = 0
-            self.cone_det_cam_false_cnt +=1
+        # create last_touched_cone_close_true flag
+        # when the current detected cone is within 5m of touched cone
+        if len(self.wpConeTouched) == 2 :
+            try :
+                # touched cone XY location in map frame 
+                tcx = self.wpConeTouched["x"]
+                tcy = self.wpConeTouched["y"]
+
+                # Detected cone XY in the camera "oak_d_frame" (not map)
+                cx = self.cone_at_x_cam
+                cy = self.cone_at_y_cam
+                ca = self.cone_at_a_cam
+                cd = self.cone_at_a_cam
+
+                # cone distance and angle from robot camera "oak_d_frame"
+                # (cd, ca, rx, ry, ra) = self.get_dist_from_robot(cx, cy)
+
+                # get current robot pose at tof_fc to determine the angle offset
+                (tf_OK, current_pose) = self.getPoseFromTF('map','tof_fc_link')
+                if not tf_OK : return -1.0
+                rx = current_pose.pose.position.x
+                ry = current_pose.pose.position.y
+                (_,_,ra) =  tf_transformations.euler_from_quaternion([
+                                        current_pose.pose.orientation.x,
+                                        current_pose.pose.orientation.y,
+                                        current_pose.pose.orientation.z,
+                                        current_pose.pose.orientation.w])
+
+                # calc angle from "map" to cone to drive with heading direct to cone
+                a = ra + ca
+                # calc detected cone coordinates x,y in map frame
+                dcx = rx + cd*math.cos(a)
+                dcy = ry + cd*math.sin(a)
+
+                # calc distance from detected cone to last touched cone
+                dx = tcx - dcx
+                dy = tcy - dcy
+                tcd = math.sqrt(dx*dx + dy*dy)
+                        
+                # self.get_logger().info(f"cone_point_cam_subscription_callback: {self.last_touched_cone_close_true=} {tcd=} {tcx=} {tcy=} {dcx=} {dcy=} {cx=} {cy=} {d=} {a=} {(cd, ca, rx, ry, ra)=}")
+
+                # impliment a 1m hysterisis for close cone detection
+                if self.last_touched_cone_close_true :
+                    if tcd > 5 : 
+                        self.last_touched_cone_close_true = False
+                        self.get_logger().info(f"cone_point_cam_subscription_callback: det cone is more than 5 meters away {self.last_touched_cone_close_true=}")
+                else :
+                    if tcd < 4 : 
+                        self.last_touched_cone_close_true = True
+                        self.get_logger().info(f"cone_point_cam_subscription_callback: det cone is less than 4 meters away {self.last_touched_cone_close_true=}")
+
+            except :
+                # use last calculated self.last_touched_cone_close_true state
+                self.get_logger().info(f"cone_point_cam_subscription_callback: cone XY conversion issue {self.wpConeTouched=} {self.last_touched_cone_close_true=}")
             
+
+        # count consecutive cone detections when not cloe to last touched cone
+        if self.last_touched_cone_close_true :
+            self.cone_det_cam_true_cnt = 0
+        elif (self.cone_at_d_cam > 0) :
+            if self.cone_det_cam_true_cnt < self.cone_det_cam_true_cnt_max :
+                self.cone_det_cam_true_cnt += 1
+        else :
+            if self.cone_det_cam_true_cnt > 0 :
+                self.cone_det_cam_true_cnt -= 1
+
+        # determine filtered cone detect true
+        if self.cone_det_cam_true :
+            if self.cone_det_cam_true_cnt < self.cone_det_cam_true_cnt_thr :
+                self.cone_det_cam_true = False
+        else :
+            if self.cone_det_cam_true_cnt > self.cone_det_cam_true_cnt_thr :
+                self.cone_det_cam_true = True
+
         # save last valid cone detection y
         if x>0.0 :
             self.cone_at_y_cam_last_det = y

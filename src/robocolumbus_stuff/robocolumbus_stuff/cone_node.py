@@ -152,7 +152,7 @@ class ConeNode(Node):
                     # pick the middle sample after sorting
                     (mx,my,mz) = m7s[3]
 
-                    # translate to ROS coordinates
+                    # translate to ROS XY dist coordinates but still relative to camera
                     (x,y,z) = (mz,-mx,my) # (x,y) and z=distance
 
                     # self.get_logger().info(f"cone detect: {x=:.2f}, {y=:.2f}, {z=:.2f}")
