@@ -99,8 +99,9 @@ class NavNode(Node):
     cd_closer_lvel = 0.25
     cd_closer_avel = cd_closer_lvel
 
-    # state=3 use /tof_fc_mid to "touch" cone using /cmd_vel
-    cd_touch_dist = 0.040
+    # state=3 use /tof_fc_mid and fr and fl to "touch" cone using /cmd_vel
+    cd_touch_c_dist = 0.040
+    cd_touch_rl_dist = 0.080
     cd_touch_lin_vel = 0.05
     cd_touch_ang_vel = cd_touch_lin_vel
 
@@ -1528,7 +1529,9 @@ class NavNode(Node):
         fr_ob_dist = self.tof_fr_obstacle_dist
 
         # use TOF distance to help determine when touched
-        d_tof = np.min((fc_ob_dist,fl_ob_dist,fr_ob_dist))
+        # d_tof = np.min((fc_ob_dist,fl_ob_dist,fr_ob_dist))
+        d_tof_c = fc_ob_dist
+        d_tof_rl = np.min((fl_ob_dist,fr_ob_dist))
 
         if killSwitchActive :
             # Stop motors and wait for kill switch not active
@@ -1539,11 +1542,11 @@ class NavNode(Node):
             self.get_logger().info(f"{func} lost cone {state=}")
             next_state = 0
         elif x > 1.5*self.cd_closer_dist :
-            self.get_logger().info(f"{func} cone is too far {d=:.3f} {d_tof=:.3f} {a=:.3f} {x=:.3f} {y=:.3f} {state=}")
+            self.get_logger().info(f"{func} cone is too far {d=:.3f} {d_tof_c=:.3f} {d_tof_rl=:.3f} {a=:.3f} {x=:.3f} {y=:.3f} {state=}")
             self.tts(f"State 3: The cone is too far at distance {d:.1f} meters")
             next_state = 0 # restart by looking for the cone
-        elif d_tof > self.cd_touch_dist :
-            self.get_logger().info(f"{func} approaching cone to touch {d=:.3f} {d_tof=:.3f} {a=:.3f} {x=:.3f} {y=:.3f} {fc_ob_dist=:.3f} {fl_ob_dist=:.3f} {fr_ob_dist=:.3f} {state=}")
+        elif (d_tof_c > self.cd_touch_c_dist) and (d_tof_rl > self.cd_touch_rl_dist) :
+            self.get_logger().info(f"{func} approaching cone to touch {d=:.3f} {d_tof_c=:.3f} {d_tof_rl=:.3f} {a=:.3f} {x=:.3f} {y=:.3f} {fc_ob_dist=:.3f} {fl_ob_dist=:.3f} {fr_ob_dist=:.3f} {state=}")
             msg.linear.x = (x/0.2)*self.cd_touch_lin_vel + 0.010
             # turn towards cone center
             # msg.angular.z =  (a/0.393)*msg.linear.x #self.cd_touch_ang_vel
@@ -1556,7 +1559,7 @@ class NavNode(Node):
             # if (fr_ob_dist < 0.2) and (fr_ob_dist > 2*fc_ob_dist) :
             #     msg.angular.z += 4*(0.2 - fr_ob_dist) * msg.linear.x
         else : 
-            self.get_logger().info(f"{func} touched {d=:.3f} {d_tof=:.3f} {a=:.3f} {x=:.3f} {y=:.3f} {fc_ob_dist=:.3f} {fl_ob_dist=:.3f} {fr_ob_dist=:.3f} {state=}")
+            self.get_logger().info(f"{func} touched {d=:.3f} {d_tof_c=:.3f} {d_tof_rl=:.3f} {a=:.3f} {x=:.3f} {y=:.3f} {fc_ob_dist=:.3f} {fl_ob_dist=:.3f} {fr_ob_dist=:.3f} {state=}")
             self.tts("The cone was touched")
             next_state = 4
 
