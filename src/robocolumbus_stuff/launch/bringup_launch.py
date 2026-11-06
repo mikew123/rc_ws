@@ -20,7 +20,7 @@ gps_enabled = data['config']['gps']
 if gps_enabled :
     xy_goal_tolerance = 3.0 # to minimize wander while gps drifts
 else :
-    xy_goal_tolerance = 0.3
+    xy_goal_tolerance = 1.0 #0.3
 print(f"{gps_enabled=} {xy_goal_tolerance=}")
 
 import launch

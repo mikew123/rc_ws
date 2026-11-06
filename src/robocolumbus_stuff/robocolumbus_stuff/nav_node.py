@@ -1803,7 +1803,7 @@ class NavNode(Node):
                 self.get_logger().info(f"cone_point_cam_subscription_callback: cone XY conversion issue {self.wpConeTouched=} {self.last_touched_cone_close_true=}")
             
 
-        # count consecutive cone detections when not cloe to last touched cone
+        # count consecutive cone detections when not close to last touched cone
         if self.last_touched_cone_close_true :
             self.cone_det_cam_true_cnt = 0
         elif (self.cone_at_d_cam > 0) :
