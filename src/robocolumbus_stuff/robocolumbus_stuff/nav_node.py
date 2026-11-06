@@ -210,7 +210,7 @@ class NavNode(Node):
         False, False, False,
         False, False, True,  # yaw from efk_local is used
         True,  False, False, # x vel from wheel encoder
-        False, False, True,  # yaw vel from imu
+        True, True, True,  # yaw vel from imu
         False, False, False
         ]
     # Disables IMU yaw (compass) from efk_local
@@ -218,7 +218,7 @@ class NavNode(Node):
         False, False, False,
         False, False, False,
         True,  False, False, # x vel from wheel encoder
-        False, False, True,  # yaw vel from imu
+        True, True, True,  # yaw vel from imu
         False, False, False
         ]
     # Enables IMU yaw (compass)
@@ -226,7 +226,7 @@ class NavNode(Node):
         False, False, False,
         False, False, True, # IMU yaw magnetic (compass)
         False, False, False,
-        False, False, True, # yaw vel from imu
+        True, True, True, # yaw vel from imu
         False, False, False 
         ]
     # Disables IMU yaw (compass)
@@ -234,7 +234,7 @@ class NavNode(Node):
         False, False, False,
         False, False, False,
         False, False, False,
-        False, False, True,  # yaw vel from imu for steering feedback
+        True, True, True,  # yaw vel from imu for steering feedback
         False, False, False 
         ]
         

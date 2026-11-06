@@ -147,7 +147,7 @@ efk_local :
     imu0_config: [false, false, false,
                   false, false, false, # IMU yaw not used (compass)
                   false, false, false,
-                  false, false, true,  # Use imu angular velocity for steering feedback
+                  true, true, true,  # Use imu angular velocity for steering feedback
                   false, false, false ]
 
     imu0_nodelay: true #false
