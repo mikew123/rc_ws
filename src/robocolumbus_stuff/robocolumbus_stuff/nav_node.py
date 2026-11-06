@@ -1538,7 +1538,7 @@ class NavNode(Node):
             # Motors are stopped by leaving velocities as msg default = 0
             pass
         elif math.isinf(x) :
-          if(state!=3):
+        #   if(state!=3):
             self.get_logger().info(f"{func} lost cone {state=}")
             next_state = 0
         elif x > 1.5*self.cd_closer_dist :

@@ -32,7 +32,7 @@ bt_navigator:
 controller_server:
   ros__parameters:
     # must update model_dt based on frequency
-    controller_frequency: 2.0 #5.0 #10.0 #20.0 
+    controller_frequency: 5.0 #10.0 #20.0 
     costmap_update_timeout: 0.30
     min_x_velocity_threshold: 0.001
     min_y_velocity_threshold: 0.001
@@ -63,7 +63,7 @@ controller_server:
       plugin: "nav2_mppi_controller::MPPIController"
       time_steps: 56
       # must be 1/controller_frequency
-      model_dt: 0.5 #0.20 #0.10 #0.05 # (1/20 = 0.05)
+      model_dt: 0.20 #0.10 #0.05 # (1/20 = 0.05)
       batch_size: 2000
       ax_max: 4.0
       ax_min: -4.0
