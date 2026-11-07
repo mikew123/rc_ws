@@ -1515,14 +1515,22 @@ class NavNode(Node):
 
         d = self.cone_at_d_lidar
         a = self.cone_at_a_lidar
-
+        dx = 0.42 #Lidar sensor is X mm back from TOF sensors
         # convert to xy relative to TOF/bumper
         x = d*math.cos(a)
         y = d*math.sin(a)
+        x -= dx
 
-        x -= 0.420 # Lidar sensor is X mm back from TOF sensors
-        # x -= 0.055 # Cone surface is X mm further at Lidar level
-
+        if math.isinf(x) :
+            # Try using camera cone detection
+            d = self.cone_at_d_cam
+            a = self.cone_at_a_cam
+            dx = 0.28 #Camera sensor is X mm back from TOF sensors
+            # convert to xy relative to TOF/bumper
+            x = d*math.cos(a)
+            y = d*math.sin(a)
+            x -= dx
+            
         # get TOF obstacle detections
         fc_ob_dist = self.tof_fc_obstacle_dist
         fl_ob_dist = self.tof_fl_obstacle_dist

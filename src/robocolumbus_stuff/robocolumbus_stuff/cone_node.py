@@ -196,8 +196,8 @@ class ConeNode(Node):
     # Lidar cone detection parameters
     lidarActive = False
     # Field of view pointing forward from Lidar 36 degree scan data 
-    fovRad_lidar = 0.758 # 45 deg, +-22.5 degrees
-    coneMinRatioLimit = np.float32(0.250*1.5)
+    fovRad_lidar = math.radians(60) # 0.758 # 45 deg, +-22.5 degrees
+    coneMinRatioLimit = np.float32(0.250*1.7) #1.5)
     coneMinMaxDiffMax = np.float32(0.060)
     coneMinMaxDiffMin = np.float32(0.005)
     coneRadius        = np.float32(0.05) # 100mm diameter at Lidar scan height     
