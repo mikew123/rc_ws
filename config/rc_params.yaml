@@ -206,7 +206,7 @@ local_costmap:
         # observation_sources: scan
         scan:
           topic: /scan
-          obstacle_max_range: 4.0 #5.0
+          obstacle_max_range: 4.0 #5.0 # ignore false readings during ground tilt
           obstacle_min_range: 0.0
           raytrace_max_range: 10.0
           raytrace_min_range: 0.0
@@ -286,7 +286,7 @@ local_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         enabled: true
-        inflation_radius: 0.52 #0.51 #0.400 #2.0 outdoors?
+        inflation_radius: 1.0 #0.52 #0.51 #0.400 #2.0 outdoors?
         cost_scaling_factor: 10.0 #1.0
         inflate_unknown: false
         inflate_around_unknown: true
@@ -306,7 +306,7 @@ global_costmap:
 
       # footprint_padding: 0.05
       # footprint: "[[0.40, 0.18], [0.40, -0.18], [-0.40, -0.18], [-0.40, 0.18]]"
-      robot_radius: 0.2 # 0.35 #0.25 #0.1
+      robot_radius: 0.3 #0.2 # 0.35 #0.25 #0.1
 
       track_unknown_space: False #true
       plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
@@ -315,8 +315,8 @@ global_costmap:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: True
         footprint_clearing_enabled: False
-        observation_sources: scan
-        # observation_sources: tof_fr tof_rc tof_rl tof_rr
+        # observation_sources: scan
+        observation_sources: scan tof_fr tof_rc tof_rl tof_rr
         scan:
           topic: /scan
           max_obstacle_height: 2.0
@@ -368,7 +368,7 @@ global_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 10.0 #3.0
-        inflation_radius: 0.52 #2.0 outdoors?
+        inflation_radius: 1.0 #0.52 #2.0 outdoors?
       always_send_full_costmap: True
 
 map_server:
@@ -542,22 +542,22 @@ collision_monitor:
       holonomic: false
       rotation:
         # points: "[[0.3, 0.3], [0.3, -0.3], [-0.3, -0.3], [-0.3, 0.3]]"
-        points: "[[0.45, 0.2], [0.45, -0.2], [-0.45, -0.2], [-0.45, 0.2]]"
+        points: "[[0.45, 0.35], [0.45, -0.35], [-0.45, -0.35], [-0.45, 0.35]]"
         linear_min: -0.05 # 0.0
         linear_max: 0.05
         theta_min: -1.0
         theta_max: 1.0
       translation_forward:
         # points: "[[0.35, 0.3], [0.35, -0.3], [-0.2, -0.3], [-0.2, 0.3]]"
-        points: "[[0.35, 0.2], [0.35, -0.2], [-0.45, -0.2], [-0.45, 0.2]]"
+        points: "[[0.45, 0.25], [0.45, -0.25], [-0.3, -0.25], [-0.3, 0.25]]"
         linear_min: 0.0
-        linear_max: 1.0
+        linear_max: 1.5
         theta_min: -1.0
         theta_max: 1.0
       translation_backward:
         # points: "[[0.2, 0.3], [0.2, -0.3], [-0.35, -0.3], [-0.35, 0.3]]"
-        points: "[[0.45, 0.2], [0.45, -0.2], [-0.35, -0.2], [-0.35, 0.2]]"
-        linear_min: -1.0
+        points: "[[0.3, 0.25], [0.3, -0.25], [-0.45, -0.25], [-0.45, 0.25]]"
+        linear_min: -1.5
         linear_max: 0.0
         theta_min: -1.0
         theta_max: 1.0
@@ -567,7 +567,7 @@ collision_monitor:
       # so it is never selected)
       stopped:
         # points: "[[0.25, 0.25], [0.25, -0.25], [-0.25, -0.25], [-0.25, 0.25]]"
-        points: "[[0.45, 0.2], [0.45, -0.2], [-0.45, -0.2], [-0.45, 0.2]]"
+        points: "[[0.5, 0.35], [0.5, -0.35], [-0.5, -0.35], [-0.5, 0.35]]"
         linear_min: -1.0
         linear_max: 1.0
         theta_min: -1.0
@@ -577,7 +577,8 @@ collision_monitor:
       type: "polygon"
       # points: "[[1.0, 0.3], [1.0, -0.3], [-1.0, -0.3], [-1.0, 0.3]]"
       # Slow down shape is cone for front and back to go through tight spaces easier
-      points: "[[1.0, 0.0], [0.6, 0.3], [-0.6, 0.3], [-1.0, 0.0], [-0.6, -0.3], [0.6, -0.3]]"
+      # points: "[[1.0, 0.0], [0.6, 0.3], [-0.6, 0.3], [-1.0, 0.0], [-0.6, -0.3], [0.6, -0.3]]"
+      points: "[[1.0, 0.0], [0.65, 0.4], [-0.65, 0.4], [-1.0, 0.0], [-0.65, -0.4], [0.65, -0.4]]"
       action_type: "slowdown"
       min_points: 4  # max_points: 3 for Humble
       slowdown_ratio: 0.3

@@ -59,7 +59,8 @@ class NavNode(Node):
     smTimerRateHz:float = 10.0
 
     T_INIT_WAIT, T_CAL_IMU, T_WAIT_GO, T_SETUP_NAV, \
-        T_GET_WP, T_NAV_WP, T_NAV_WP_AGAIN, T_GOTO_CONE, T_DONE = range(9)
+        T_GET_WP, T_NAV_WP, T_NAV_WP_BACKUP, T_NAV_WP_AGAIN, \
+        T_GOTO_CONE, T_DONE = range(10)
     tc_state = -1
     tc_next_state = T_INIT_WAIT
 
@@ -178,6 +179,8 @@ class NavNode(Node):
     wpConeTrue:bool    = False
     wpCone:dict        = None
     wpConeTouched:dict = {}
+
+    wpStopTime:float = 0.0
 
     # sm_last_state = -1
 
@@ -826,6 +829,7 @@ class NavNode(Node):
                         'max_velocity', self.velocity_smoother_max_velocity_cone, "velocity_smoother")
             
     last_touched_cone_close_true:bool = False
+    sm_timeout:float = 0.0 # Timeout for states
 
     def sm_timer_callback(self):
 
@@ -944,15 +948,43 @@ class NavNode(Node):
                         next_state = self.T_GET_WP
                 else :
                     # try again
-                    self.tts("Attempt to navigate to way point location again")
+                    self.tts("Failed to navigate to way point")
+                    # backup a bit on failure before trying again (stuck in bush)
                     # next_state = self.T_WAIT_REQ
-                    next_state = self.T_NAV_WP_AGAIN
+                    # next_state = self.T_NAV_WP_AGAIN
+                    next_state = self.T_NAV_WP_BACKUP
+
+        # T_NAV_WP_BACKUP
+        elif state == self.T_NAV_WP_BACKUP :
+            msg = Twist()
+            if stateChange==True :
+                self.tts("Backup before navigating to way point location again")
+                driveT = 2.5
+                self.wpStopTime = time.monotonic() + driveT
+
+            if time.monotonic() >= self.wpStopTime :
+                (msg.linear.x, msg.angular.z) = (0.0, 0.0)
+                next_state = self.T_NAV_WP_AGAIN
+                self.tts("Attempt to navigate to way point location again")
+            else :
+                speed = 0.1
+                (msg.linear.x, msg.angular.z) = self.driveManObs(speed, -2*speed)
+
+            # drive robot command
+            self.cmd_vel_publisher.publish(msg)
 
         # T_GOTO_CONE
         elif state == self.T_GOTO_CONE :
             if stateChange :
                 self.tts(f"Go to the cone")
                 self.smTimerNav2Config(state)
+                timeout = 45.0
+                self.sm_timeout = time.monotonic() + timeout
+
+            if time.monotonic() >= self.sm_timeout :
+                # timed out - backup and try going to waypoint again
+                self.tts(f"Timeout going to the cone")
+                next_state = self.T_NAV_WP_BACKUP
 
             # find cone and "touch" it
             done = self.cd_sm()
@@ -1077,21 +1109,25 @@ class NavNode(Node):
         # Max distance to object from TOF sensors to avoid/slow
         tofObjMax = 0.50
         # Min distance to object from TOF sensors to stop
-        tofObjMin = 0.20
+        tofObjMin = 0.10
         # Max distance to object from Range sensors to avoid/slow
         rngObjMax = 0.50
         # Min distance to object from Range sensors to stop
         rngObjMin = 0.20
 
+        # Get front left and right range sensor data
+        # this is currently using Lidar to emulate a range sensor
         rngr_ob_dist = self.range_r_obstacle_dist
         rngl_ob_dist = self.range_l_obstacle_dist
 
-        if lx <0 :
         # get object distances from TOF sensors
+        if lx <0 :
+            # get rear sensors when going backward
             c_ob_dist = self.tof_rc_obstacle_dist
             l_ob_dist = self.tof_rl_obstacle_dist
             r_ob_dist = self.tof_rr_obstacle_dist
         else :
+            # get front sensors when going forward
             c_ob_dist = self.tof_fc_obstacle_dist
             l_ob_dist = self.tof_fl_obstacle_dist
             r_ob_dist = self.tof_fr_obstacle_dist
@@ -1146,16 +1182,21 @@ class NavNode(Node):
         # add all angular velocities to maximally avoid the obstical
         # NOTE: if L and R are equal they cancel out and no rotation
         # select the minimum linear velocity adjustment
-        if lx < 0 :
-            az += 2*(ac + ar + al - arr - arl)
-            lx *= np.min((xc,xr,xl,xrr,xrl))
+        l = lx
+        a = az
+        if l < 0 :
+            # avoid obstacles while going backward
+            a += 2*(ac + ar + al - arr - arl)
+            # l *= np.min((xc,xr,xl,xrr,xrl))
+            l *= np.min((xc,xr,xl))
         else :
-            az -= 2*(ac + ar + al - arr - arl)
-            lx *= np.min((xc,xr,xl,xrr,xrl))
+            # avoid obstacles while going forward
+            a -= 2*(ac + ar + al - arr - arl)
+            l *= np.min((xc,xr,xl,xrr,xrl))
 
-        if lx == 0.0 :
-            self.get_logger().info(f"driveManObs: Stopped {lx=} {az=}")
-            self.tts(f"Stopped while manual driving")
+        if l == 0.0 :
+            self.get_logger().info(f"driveManObs: Stopped {lx=} {az=} {l=} {a=} {c_ob_dist=} {r_ob_dist=} {l_ob_dist} {rngr_ob_dist=} {rngl_ob_dist=}")
+            self.tts(f"Obstacle stop while manual driving")
 
         return (lx, az)
 
@@ -1197,11 +1238,9 @@ class NavNode(Node):
             if stateChange==True :
                 self.dpStopTime = time.monotonic() + math.fabs(driveT)
 
-            # msg.linear.x  = speed
-            # msg.angular.z = -2*speed
             (msg.linear.x, msg.angular.z) = self.driveManObs(speed, -2*speed)
 
-            if time.monotonic() >= self.dpStopTime :
+            if (time.monotonic() >= self.dpStopTime) or  (msg.linear.x==0.0) :
                 self.dpPauseNextState = self.DP_REV_LEFT
                 next_state = self.DP_PAUSE
 
@@ -1209,11 +1248,9 @@ class NavNode(Node):
             if stateChange==True :
                 self.dpStopTime = time.monotonic() + math.fabs(driveT)
 
-            # msg.linear.x  = -speed
-            # msg.angular.z = -2*speed
             (msg.linear.x, msg.angular.z) = self.driveManObs(-speed, -2*speed)
 
-            if time.monotonic() >= self.dpStopTime :
+            if (time.monotonic() >= self.dpStopTime) or  (msg.linear.x==0.0) :
                 self.dpPauseNextState = self.DP_FWD_RIGHT
                 next_state = self.DP_PAUSE
 
