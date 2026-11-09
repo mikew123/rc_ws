@@ -89,18 +89,19 @@ class NavNode(Node):
 
     cd_sub_state = -1
 
-    # state=1 use /cone_point to get location for navigator to drive to
-    # Distance from detected cone to end navigation
-    cd_cone_stop_dist = 1.5 # 3.0 # 1.5 increase for GPS wander
-    # nav this amount of time before getting new cone fix
-    cd_cone_nav_time = 5 # 2.5
+    # state=1 use /cone_point to get location to drive close to cone using /cmd_vel
+    cd_close_dist = 1.0
+    cd_close_lvel = 1.0
+    cd_close_avel = (9.5*cd_close_lvel)/(2*math.pi)
+    cd_close_stop_dist = 10.0
 
-    # state=2 use /Lidar +-22.5 FOV to get closer to cone using /cmd_vel
+    # state=2 use camera /cone_point to drive closer to cone using /cmd_vel
     cd_closer_dist = 0.5
     cd_closer_lvel = 0.25
-    cd_closer_avel = cd_closer_lvel
+    cd_closer_avel = (9.5*cd_closer_lvel)/(2*math.pi)
+    cd_closer_stop_dist = 2.0
 
-    # state=3 use /tof_fc_mid and fr and fl to "touch" cone using /cmd_vel
+    # state=3 use Lidar and /tof_fc_mid and fr and fl to "touch" cone using /cmd_vel
     cd_touch_c_dist = 0.040
     cd_touch_rl_dist = 0.080
     cd_touch_lin_vel = 0.05
@@ -1320,7 +1321,8 @@ class NavNode(Node):
             next_state = self.search_for_cone(func,state,state_change,ks,ksc)
 
         elif state == 1 :
-            next_state = self.nav_to_cone(func,state,state_change,ks,ksc)
+            # next_state = self.nav_to_cone(func,state,state_change,ks,ksc)
+            next_state = self.drive_to_cone(func,state,state_change,ks,ksc)
                 
         elif state == 2 :
             next_state = self.get_closer_to_cone(func,state,state_change,ks,ksc)
@@ -1408,85 +1410,13 @@ class NavNode(Node):
 
     #state 1 - use camera to locate cone and get close
     cd_sub_timer = 0
-    def nav_to_cone(self, func:str, state:int, state_change:bool, ks:bool, ksc:bool) -> int :
-        cur_time = time.time_ns()*1e-9
-        if state_change :
-            self.get_logger().info(f"{func} navigate with BasicNavigator close to cone {state=}")
-            self.tts("Go towards the cone")
-            self.cd_sub_state = 0
 
-        # get cone xy from camera detect
-        x:float = self.cone_at_x_cam
-        y:float = self.cone_at_y_cam
-        t:int = self.cone_det_time_cam
-        to:int = self.cone_det_time_out_cam
-        dt:int = (time.time_ns()*1e-9) - t
-        # self.get_logger().info(f"{func} {dt=} {t=} {x=} {y=} ")
-        if dt>to and t>0:
-            self.get_logger().info(f"{func} cone detection is stale {x=} {y=} {dt=}")
-            x = 0
-            y = 0
-
-        killSwitchActive:bool = ks
-        killSwitchChange = ksc
-        next_state = state
-
-
-        if x != 0 :
-            stopDist = self.cd_cone_stop_dist
-            t = self.cd_cone_nav_time
-
-            # non-blocking navigation
-            if self.cd_sub_state == 0 :
-                if not killSwitchActive :
-                    # issue a navigation command
-                    # x,y is relative to tof_fc sensor
-                    if self.nav.isTaskComplete() :
-                        self.gotoConeXY(x,y,stopDist,t) # non-blocking
-                        self.cd_sub_timer = cur_time
-                        self.cd_sub_state = 1
-
-            elif self.cd_sub_state == 1 :
-                if killSwitchActive :
-                    # Cancel goal and wait when kill switch status changes to active
-                    if killSwitchChange :
-                        self.cancelNav2Task()
-                        self.cd_sub_state = 0
-                else : # Execute when kill switch is not active
-                    # check for nav complete or navigate time finished and try again
-                    if (cur_time - self.cd_sub_timer) < t :
-                        if self.nav.isTaskComplete() :
-                            # x,y is relative to tof_fc sensor
-                            d = math.sqrt(x*x + y*y)
-
-                            if d <= stopDist + 0.1 :
-                                self.get_logger().info(f"{func} nav done - close to cone {d=:.3f} {state=}")
-                                next_state = 2
-                            else :
-                                self.get_logger().info(f"{func} nav again closer to cone {d=:.3f} {state=}")
-                                self.cd_sub_state = 0
-                    else :
-                        self.get_logger().info(f"{func} Get new cone placement and navigate some more {state=}")
-                        if self.cancelNav2Task() :
-                            self.cd_sub_state = 0
-
-        else : # x == 0 , no cone detected
-          if(state!=3) :
-            self.get_logger().info(f"{func} lost cone {state=}")
-            if self.cancelNav2Task() :
-                next_state = 0
-
-        return next_state
-
-    def cancelNav2Task(self) -> bool:
-        if not self.nav.isTaskComplete() :
-            self.nav.cancelTask()
-            self.get_logger().info(f"cancelNav2Task: canceling")
-
-        return self.nav.isTaskComplete()
-    
-    #state 2 - get closer to cone
-    def get_closer_to_cone(self, func:str, state:int, state_change:bool, ks:bool, ksc:bool) -> int :
+    def drive_to_cone(self, func:str, state:int, state_change:bool, ks:bool, ksc:bool) -> int :
+        """
+        Alternate state=1 
+        Drive to the cone after detection without using navigator
+        Use /cone_point location to drive to it using /cmd_vel
+        """
         if state_change :
             self.get_logger().info(f"{func} drive closer to cone using cmd_vel and camera {state=}")
             self.tts("Get closer to cone")
@@ -1513,7 +1443,62 @@ class NavNode(Node):
         elif d == 0 :
             self.get_logger().info(f"{func} lost cone {state=}")
             next_state = 0
-        elif d > 2*self.cd_cone_stop_dist :
+        elif d > 2*self.cd_close_stop_dist :
+            self.get_logger().info(f"{func} cone is too far {d=} {state=}")
+            next_state = 5 # back up
+        elif d > self.cd_close_dist :
+            msg.linear.x =  self.cd_close_lvel
+            # use angle to turn towards the cone
+            msg.angular.z =  (a/0.393)*self.cd_close_avel
+            # steer away from obstacle detected using TOF sensors
+            if fl_ob_dist < 0.5 :
+                msg.angular.z += 4*(fl_ob_dist - 0.4) * self.cd_close_avel/2
+            if fr_ob_dist < 0.5 :
+                msg.angular.z -= 4*(fr_ob_dist - 0.4) * self.cd_close_avel/2
+            
+        else : 
+            self.get_logger().info(f"{func} at the close distance {d=:.3f} {a=:.3f} {state=}")
+            next_state = 2
+
+        #self.get_logger().info(f"{func} {d=:.3f} lx={msg.linear.x:.3f} az={msg.angular.z:.3f}")
+        self.cmd_vel_publisher.publish(msg)
+        # self.get_logger().info(f"{func} {state=} {msg=}")
+        
+        return next_state
+
+    #state 2 - get closer to cone
+    def get_closer_to_cone(self, func:str, state:int, state_change:bool, ks:bool, ksc:bool) -> int :
+        """
+        State 2 - gets closer to cone before touching
+        Basically the same as state 1 but slower and stops a smaller distance from cone
+        """
+        if state_change :
+            self.get_logger().info(f"{func} drive closer to cone using cmd_vel and camera {state=}")
+            self.tts("Get closer to cone")
+
+        # Wait 2 seconds before starting - not sure why
+        if (time.time_ns()*1e-9 - self.cd_timer) < 2.0 : return state
+
+        a:float = self.cone_at_a_cam
+        d:float = self.cone_at_d_cam
+        d -= 0.24 # Crude transformation, camera is 0.24 behind tof sensor
+
+        # get TOF obstacle detections
+        fl_ob_dist = self.tof_fl_obstacle_dist
+        fr_ob_dist = self.tof_fr_obstacle_dist
+
+        killSwitchActive:bool = ks
+        next_state = state
+        msg = Twist()
+
+        if killSwitchActive :
+            # Stop motors and wait for kill switch not active
+            # Motors are stopped by leaving velocities to msg defaults as 0
+            pass
+        elif d == 0 :
+            self.get_logger().info(f"{func} lost cone {state=}")
+            next_state = 0
+        elif d > 2*self.cd_closer_stop_dist :
             self.get_logger().info(f"{func} cone is too far {d=} {state=}")
             next_state = 5 # back up
         elif d > self.cd_closer_dist :
@@ -1597,12 +1582,6 @@ class NavNode(Node):
             # msg.angular.z =  (a/0.393)*msg.linear.x #self.cd_touch_ang_vel
             msg.angular.z =  (8*y)*msg.linear.x
 
-            # # Commented out, it seemed to cause an drive angle offset
-            # # steer away from obstacle detected using TOF sensors
-            # if (fl_ob_dist < 0.2) and (fl_ob_dist > 2*fc_ob_dist) :
-            #     msg.angular.z -= 4*(0.2 - fl_ob_dist) * msg.linear.x
-            # if (fr_ob_dist < 0.2) and (fr_ob_dist > 2*fc_ob_dist) :
-            #     msg.angular.z += 4*(0.2 - fr_ob_dist) * msg.linear.x
         else : 
             self.get_logger().info(f"{func} touched {d=:.3f} {d_tof_c=:.3f} {d_tof_rl=:.3f} {a=:.3f} {x=:.3f} {y=:.3f} {fc_ob_dist=:.3f} {fl_ob_dist=:.3f} {fr_ob_dist=:.3f} {state=}")
             self.tts("The cone was touched")
@@ -1689,6 +1668,14 @@ class NavNode(Node):
     
 
     #***************************************************************************
+
+    def cancelNav2Task(self) -> bool:
+        if not self.nav.isTaskComplete() :
+            self.nav.cancelTask()
+            self.get_logger().info(f"cancelNav2Task: canceling")
+
+        return self.nav.isTaskComplete()
+    
 
     def get_dist_from_robot(self, Tx:float, Ty:float) -> tuple:
         """
