@@ -542,21 +542,21 @@ collision_monitor:
       holonomic: false
       rotation:
         # points: "[[0.3, 0.3], [0.3, -0.3], [-0.3, -0.3], [-0.3, 0.3]]"
-        points: "[[0.45, 0.35], [0.45, -0.35], [-0.45, -0.35], [-0.45, 0.35]]"
+        points: "[[0.50, 0.35], [0.50, -0.35], [-0.50, -0.35], [-0.50, 0.35]]"
         linear_min: -0.05 # 0.0
         linear_max: 0.05
         theta_min: -1.0
         theta_max: 1.0
       translation_forward:
         # points: "[[0.35, 0.3], [0.35, -0.3], [-0.2, -0.3], [-0.2, 0.3]]"
-        points: "[[0.45, 0.25], [0.45, -0.25], [-0.3, -0.25], [-0.3, 0.25]]"
+        points: "[[0.50, 0.25], [0.50, -0.25], [-0.3, -0.25], [-0.3, 0.25]]"
         linear_min: 0.0
         linear_max: 1.5
         theta_min: -1.0
         theta_max: 1.0
       translation_backward:
         # points: "[[0.2, 0.3], [0.2, -0.3], [-0.35, -0.3], [-0.35, 0.3]]"
-        points: "[[0.3, 0.25], [0.3, -0.25], [-0.45, -0.25], [-0.45, 0.25]]"
+        points: "[[0.3, 0.25], [0.3, -0.25], [-0.50, -0.25], [-0.50, 0.25]]"
         linear_min: -1.5
         linear_max: 0.0
         theta_min: -1.0
@@ -567,7 +567,7 @@ collision_monitor:
       # so it is never selected)
       stopped:
         # points: "[[0.25, 0.25], [0.25, -0.25], [-0.25, -0.25], [-0.25, 0.25]]"
-        points: "[[0.5, 0.35], [0.5, -0.35], [-0.5, -0.35], [-0.5, 0.35]]"
+        points: "[[0.50, 0.35], [0.50, -0.35], [-0.50, -0.35], [-0.50, 0.35]]"
         linear_min: -1.0
         linear_max: 1.0
         theta_min: -1.0
@@ -581,7 +581,7 @@ collision_monitor:
       points: "[[1.0, 0.0], [0.65, 0.4], [-0.65, 0.4], [-1.0, 0.0], [-0.65, -0.4], [0.65, -0.4]]"
       action_type: "slowdown"
       min_points: 4  # max_points: 3 for Humble
-      slowdown_ratio: 0.3
+      slowdown_ratio: 0.2
       visualize: True
       polygon_pub_topic: "polygon_slowdown"
     observation_sources: ["scan", "tof_rc", "tof_rl", "tof_rr", "tof_fc", "tof_fl", "tof_fr"]

@@ -90,16 +90,16 @@ class NavNode(Node):
     cd_sub_state = -1
 
     # state=1 use /cone_point to get location to drive close to cone using /cmd_vel
-    cd_close_dist = 1.0
+    cd_close_dist = 1.2 # distance from camera to cone
     cd_close_lvel = 1.0
     cd_close_avel = (9.5*cd_close_lvel)/(2*math.pi)
-    cd_close_stop_dist = 10.0
+    cd_close_too_far_dist = 20.0
 
     # state=2 use camera /cone_point to drive closer to cone using /cmd_vel
     cd_closer_dist = 0.5
     cd_closer_lvel = 0.25
     cd_closer_avel = (9.5*cd_closer_lvel)/(2*math.pi)
-    cd_closer_stop_dist = 2.0
+    cd_closer_too_far_dist = 2.0
 
     # state=3 use Lidar and /tof_fc_mid and fr and fl to "touch" cone using /cmd_vel
     cd_touch_c_dist = 0.040
@@ -1443,18 +1443,19 @@ class NavNode(Node):
         elif d == 0 :
             self.get_logger().info(f"{func} lost cone {state=}")
             next_state = 0
-        elif d > 2*self.cd_close_stop_dist :
+        elif d > 2*self.cd_close_too_far_dist :
             self.get_logger().info(f"{func} cone is too far {d=} {state=}")
             next_state = 5 # back up
         elif d > self.cd_close_dist :
             msg.linear.x =  self.cd_close_lvel
             # use angle to turn towards the cone
-            msg.angular.z =  (a/0.393)*self.cd_close_avel
+            msg.angular.z =  (a/0.393)*self.cd_close_avel/2
             # steer away from obstacle detected using TOF sensors
             if fl_ob_dist < 0.5 :
-                msg.angular.z += 4*(fl_ob_dist - 0.4) * self.cd_close_avel/2
+                msg.angular.z += (fl_ob_dist - 0.4) * self.cd_close_avel
             if fr_ob_dist < 0.5 :
-                msg.angular.z -= 4*(fr_ob_dist - 0.4) * self.cd_close_avel/2
+                msg.angular.z -= (fr_ob_dist - 0.4) * self.cd_close_avel
+                
             
         else : 
             self.get_logger().info(f"{func} at the close distance {d=:.3f} {a=:.3f} {state=}")
@@ -1498,7 +1499,7 @@ class NavNode(Node):
         elif d == 0 :
             self.get_logger().info(f"{func} lost cone {state=}")
             next_state = 0
-        elif d > 2*self.cd_closer_stop_dist :
+        elif d > 2*self.cd_closer_too_far_dist :
             self.get_logger().info(f"{func} cone is too far {d=} {state=}")
             next_state = 5 # back up
         elif d > self.cd_closer_dist :
