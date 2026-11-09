@@ -229,7 +229,7 @@ class NavNode(Node):
         False, False, False,
         False, False, True, # IMU yaw magnetic (compass)
         False, False, False,
-        True, True, True, # yaw vel from imu
+        True, True, True, # roll,pitch,yaw vel from imu
         False, False, False 
         ]
     # Disables IMU yaw (compass)
@@ -237,7 +237,7 @@ class NavNode(Node):
         False, False, False,
         False, False, False,
         False, False, False,
-        True, True, True,  # yaw vel from imu for steering feedback
+        True, True, True,  # roll,pitch,yaw vel from imu for steering feedback
         False, False, False 
         ]
         
@@ -807,7 +807,7 @@ class NavNode(Node):
 
             if self.wpCompass == True:
                 self.send_set_param_request(self.efk_global_set_param_svc, # Compass
-                            'imu0_config', self.efk_global_odom0_config_yawEn, "efk_global")
+                            'odom0_config', self.efk_global_odom0_config_yawEn, "efk_global")
                 self.send_set_param_request(self.efk_local_set_param_svc, # Compass
                             'imu0_config', self.efk_local_imu0_config_yawEn, "efk_local")
                     
