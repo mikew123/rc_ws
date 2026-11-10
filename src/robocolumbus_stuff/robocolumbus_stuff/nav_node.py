@@ -413,17 +413,22 @@ class NavNode(Node):
 
         # convert lat lon waypoints to x y
         wpoints = self.wpWaypoints
-        if ("lat" in self.wpSetPose) and ("lon" in self.wpSetPose) :
-            # pose lat lon is the starting point 0,0
-            poseLat = self.wpSetPose["lat"]
-            poseLon = self.wpSetPose["lon"]
-            # set pose x,y to origin of map 0,0
-            self.wpSetPose["x"] = 0.0
-            self.wpSetPose["y"] = 0.0    
+        if self.wpSetPose != None :
+            if ("lat" in self.wpSetPose) and ("lon" in self.wpSetPose) :
+                # pose lat lon is the starting point 0,0
+                poseLat = self.wpSetPose["lat"]
+                poseLon = self.wpSetPose["lon"]
+                # set pose x,y to origin of map 0,0
+                self.wpSetPose["x"] = 0.0
+                self.wpSetPose["y"] = 0.0    
+            else :
+                poseLat = None
+                poseLon = None
+                self.get_logger().error(f"readWaypointsFile: pose does not have lat+lon")
         else :
             poseLat = None
             poseLon = None
-            self.get_logger().error(f"readWaypointsFile: pose does not have lat+lon")
+            self.get_logger().error(f"readWaypointsFile: there is no pose")
 
         if wpoints != None :
             length = len(wpoints) # num of waypoints in file

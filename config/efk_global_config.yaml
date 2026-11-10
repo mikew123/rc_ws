@@ -114,7 +114,7 @@ efk_global :
     # data is converted to velocity data by differentiating the absolute pose measurements. These velocities are then
     # integrated as usual. NOTE: this only applies to sensors that provide pose measurements; setting differential to true
     # for twist measurements has no effect.
-    odom0_differential: false
+    odom0_differential: true
 
     # [ADVANCED] When the node starts, if this parameter is true, then the first measurement is treated as a "zero point"
     # for all future measurements. While you can achieve the same effect with the differential paremeter, the key
@@ -150,7 +150,7 @@ efk_global :
                   false, false, false ]
 
     imu0_nodelay: true
-    imu0_differential: false
+    imu0_differential: true #false
     imu0_relative: false
     imu0_queue_size: 5
 
@@ -167,9 +167,10 @@ efk_global :
                   false, false, false,
                   false, false, false,
                   false, false, false]
-    odom1_queue_size: 10
+    odom1_nodelay: true
     odom1_differential: false
     odom1_relative: false
+    odom1_queue_size: 10
 
 
 

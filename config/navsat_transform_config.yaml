@@ -1,7 +1,7 @@
 # Transform GPS nav data to ros2 map based data
 navsat_transform:
   ros__parameters:
-    frequency: 30.0
+    frequency: 10.0 #30.0
     delay: 3.0
 
     # IMU is calibrated
