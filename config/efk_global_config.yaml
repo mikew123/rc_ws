@@ -91,9 +91,9 @@ efk_global :
 
     # odom is the efk local fusion of wheel (linear x) and imu (yaw_vel+roll+pitch)
     odom0_config: [false, false, false,
-                   false,  false,  true, # yaw
-                   true,  false, false, # x_vel
-                   true, true, true,  # yaw velocity
+                   false, false, false, # yaw direction from local efk not used
+                   true,  false, false, # linear velocity from local efk
+                   true,  true,  true,  # IMU angular velocities from local efk
                    false, false, false]
 
 
@@ -131,6 +131,29 @@ efk_global :
     #odom0_pose_rejection_threshold: 5
     #odom0_twist_rejection_threshold: 1
 
+    # use IMU for is YAW direction (compass) for GPS when enabled externally
+    imu0: /imu
+
+    # The order of the values is x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw, ax, ay, az.
+    #        [x_pos   , y_pos    , z_pos,
+    #         roll    , pitch    , yaw,
+    #         x_vel   , y_vel    , z_vel,
+    #         roll_vel, pitch_vel, yaw_vel,
+    #         x_accel , y_accel  , z_accel]
+
+    # use absolute yaw (when differential = false) - needs calibration at startup
+    # use x and z acceleration and yaw_vel
+    imu0_config: [false, false, false,
+                  false, false, false, # IMU yaw not used
+                  false, false, false,
+                  false, false, false,  
+                  false, false, false ]
+
+    imu0_nodelay: true
+    imu0_differential: false
+    imu0_relative: false
+    imu0_queue_size: 5
+
 
     # GPS odometry from navsat_transform
     odom1: /odometry/gps
@@ -147,6 +170,7 @@ efk_global :
     odom1_queue_size: 10
     odom1_differential: false
     odom1_relative: false
+
 
 
     # [ADVANCED]  The EKF and UKF models follow a standard predict/correct cycle. During prediction, if there is no

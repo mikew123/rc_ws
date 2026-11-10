@@ -200,7 +200,7 @@ class NavNode(Node):
         False, False, False,
         False, False, False,
         False, False, False 
-                ]
+        ]
     # Disables GPS signals for map->odom tf
     efk_global_odom1_config_gpsDis = [
         False, False, False,
@@ -208,39 +208,56 @@ class NavNode(Node):
         False, False, False,
         False, False, False,
         False, False, False 
-                ]
-    # Enables IMU yaw (compass) from efk_local
-    efk_global_odom0_config_yawEn = [
-        False, False, False,
-        False, False, True,  # yaw from efk_local is used
-        True,  False, False, # x vel from wheel encoder
-        True, True, True,  # yaw vel from imu
-        False, False, False
-        ]
-    # Disables IMU yaw (compass) from efk_local
-    efk_global_odom0_config_yawDis = [
-        False, False, False,
-        False, False, False,
-        True,  False, False, # x vel from wheel encoder
-        True, True, True,  # yaw vel from imu
-        False, False, False
         ]
     # Enables IMU yaw (compass)
-    efk_local_imu0_config_yawEn = [
+    efk_global_imu0_config_yawEn = [
         False, False, False,
         False, False, True, # IMU yaw magnetic (compass)
         False, False, False,
-        True, True, True, # roll,pitch,yaw vel from imu
+        False, False, False,
         False, False, False 
         ]
     # Disables IMU yaw (compass)
-    efk_local_imu0_config_yawDis = [
+    efk_global_imu0_config_yawDis = [
         False, False, False,
         False, False, False,
         False, False, False,
-        True, True, True,  # roll,pitch,yaw vel from imu for steering feedback
+        False, False, False,
         False, False, False 
         ]
+
+    # # Enables IMU yaw (compass) from efk_local
+    # efk_global_odom0_config_yawEn = [
+    #     False, False, False,
+    #     False, False, True,  # yaw from efk_local is used
+    #     True,  False, False, # x vel from wheel encoder
+    #     True, True, True,  # yaw vel from imu
+    #     False, False, False
+    #     ]
+    # # Disables IMU yaw (compass) from efk_local
+    # efk_global_odom0_config_yawDis = [
+    #     False, False, False,
+    #     False, False, False,
+    #     True,  False, False, # x vel from wheel encoder
+    #     True, True, True,  # yaw vel from imu
+    #     False, False, False
+    #     ]
+    # # Enables IMU yaw (compass)
+    # efk_local_imu0_config_yawEn = [
+    #     False, False, False,
+    #     False, False, True, # IMU yaw magnetic (compass)
+    #     False, False, False,
+    #     True, True, True, # roll,pitch,yaw vel from imu
+    #     False, False, False 
+    #     ]
+    # # Disables IMU yaw (compass)
+    # efk_local_imu0_config_yawDis = [
+    #     False, False, False,
+    #     False, False, False,
+    #     False, False, False,
+    #     True, True, True,  # roll,pitch,yaw vel from imu for steering feedback
+    #     False, False, False 
+    #     ]
         
 
     # Velocity when going to way point
@@ -785,10 +802,12 @@ class NavNode(Node):
                 self.send_set_param_request(self.efk_global_set_param_svc, # GPS
                             'odom1_config', self.efk_global_odom1_config_gpsEn, "efk_global")
                 self.send_set_param_request(self.efk_global_set_param_svc, # Compass
-                            'odom0_config', self.efk_global_odom0_config_yawEn, "efk_global")
-                self.send_set_param_request(self.efk_local_set_param_svc, # Compass
-                            'imu0_config', self.efk_local_imu0_config_yawEn, "efk_local")
-                self.send_set_param_request(self.velocity_smoother_set_param_svc, # Compass
+                            'imu0_config', self.efk_global_imu0_config_yawEn, "efk_global")
+                # self.send_set_param_request(self.efk_global_set_param_svc, # Compass
+                #             'odom0_config', self.efk_global_odom0_config_yawEn, "efk_global")
+                # self.send_set_param_request(self.efk_local_set_param_svc, # Compass
+                #             'imu0_config', self.efk_local_imu0_config_yawEn, "efk_local")
+                self.send_set_param_request(self.velocity_smoother_set_param_svc,
                             'max_velocity', self.velocity_smoother_max_velocity_wp, "velocity_smoother")
             else :
                 # self.send_set_param_request(self.efk_global_set_param_svc, 
@@ -800,17 +819,21 @@ class NavNode(Node):
                 self.send_set_param_request(self.efk_global_set_param_svc, # GPS
                             'odom1_config', self.efk_global_odom1_config_gpsDis, "efk_global")
                 self.send_set_param_request(self.efk_global_set_param_svc, # Compass
-                            'odom0_config', self.efk_global_odom0_config_yawEn, "efk_global")
-                self.send_set_param_request(self.efk_local_set_param_svc, # Compass
-                            'imu0_config', self.efk_local_imu0_config_yawDis, "efk_local")
-                self.send_set_param_request(self.velocity_smoother_set_param_svc, # Compass
+                            'imu0_config', self.efk_global_imu0_config_yawDis, "efk_global")
+                # self.send_set_param_request(self.efk_global_set_param_svc, # Compass
+                #             'odom0_config', self.efk_global_odom0_config_yawEn, "efk_global")
+                # self.send_set_param_request(self.efk_local_set_param_svc, # Compass
+                #             'imu0_config', self.efk_local_imu0_config_yawDis, "efk_local")
+                self.send_set_param_request(self.velocity_smoother_set_param_svc,
                             'max_velocity', self.velocity_smoother_max_velocity_wp, "velocity_smoother")
 
             if self.wpCompass == True:
                 self.send_set_param_request(self.efk_global_set_param_svc, # Compass
-                            'odom0_config', self.efk_global_odom0_config_yawEn, "efk_global")
-                self.send_set_param_request(self.efk_local_set_param_svc, # Compass
-                            'imu0_config', self.efk_local_imu0_config_yawEn, "efk_local")
+                            'imu0_config', self.efk_global_imu0_config_yawEn, "efk_global")
+                # self.send_set_param_request(self.efk_global_set_param_svc, # Compass
+                #             'odom0_config', self.efk_global_odom0_config_yawEn, "efk_global")
+                # self.send_set_param_request(self.efk_local_set_param_svc, # Compass
+                #             'imu0_config', self.efk_local_imu0_config_yawEn, "efk_local")
                     
         elif state == self.T_GOTO_CONE :
             # configure navigation nodes parameters for goto cone
@@ -823,9 +846,9 @@ class NavNode(Node):
             self.send_set_param_request(self.efk_global_set_param_svc, # GPS
                         'odom1_config', self.efk_global_odom1_config_gpsDis, "efk_global")
             self.send_set_param_request(self.efk_global_set_param_svc, # Compass
-                        'odom0_config', self.efk_global_odom0_config_yawDis, "efk_global")
-            self.send_set_param_request(self.efk_local_set_param_svc, # Compass
-                        'imu0_config', self.efk_local_imu0_config_yawDis, "efk_local")
+                        'imu0_config', self.efk_global_imu0_config_yawDis, "efk_global")
+            # self.send_set_param_request(self.efk_local_set_param_svc, # Compass
+            #             'imu0_config', self.efk_local_imu0_config_yawDis, "efk_local")
             self.send_set_param_request(self.velocity_smoother_set_param_svc,
                         'max_velocity', self.velocity_smoother_max_velocity_cone, "velocity_smoother")
             
@@ -1418,7 +1441,7 @@ class NavNode(Node):
         Use /cone_point location to drive to it using /cmd_vel
         """
         if state_change :
-            self.get_logger().info(f"{func} drive closer to cone using cmd_vel and camera {state=}")
+            self.get_logger().info(f"{func} drive close to cone using cmd_vel and camera {state=}")
             self.tts("Get closer to cone")
 
         # Wait 2 seconds before starting - not sure why
@@ -1440,7 +1463,7 @@ class NavNode(Node):
             # Stop motors and wait for kill switch not active
             # Motors are stopped by leaving velocities to msg defaults as 0
             pass
-        elif d == 0 :
+        elif d <= 0 :
             self.get_logger().info(f"{func} lost cone {state=}")
             next_state = 0
         elif d > 2*self.cd_close_too_far_dist :
@@ -1496,7 +1519,7 @@ class NavNode(Node):
             # Stop motors and wait for kill switch not active
             # Motors are stopped by leaving velocities to msg defaults as 0
             pass
-        elif d == 0 :
+        elif d <= 0 :
             self.get_logger().info(f"{func} lost cone {state=}")
             next_state = 0
         elif d > 2*self.cd_closer_too_far_dist :
@@ -1775,6 +1798,18 @@ class NavNode(Node):
         t = time.time_ns() * 1e-9 # seconds
         a = math.atan2(y,x)
         d = math.sqrt(x*x + y*y)
+
+        # adjust angle for camera angle in urdf
+        # TODO: get from TF (urdf file)
+        urdf_a = 0.05
+        a += urdf_a
+        # limit +-pi
+        if urdf_a>+math.pi : urdf_a -= math.pi
+        if urdf_a<-math.pi : urdf_a += math.pi
+        
+        # recompute x y, dist not changed
+        x = d*math.cos(a)
+        y = d*math.sin(a)
 
         # TF cone xy relative to "/tof_fc_link" which is considered the front of the robot
         self.cone_at_x_cam = x
