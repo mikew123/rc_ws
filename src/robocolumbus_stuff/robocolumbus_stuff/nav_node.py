@@ -1063,7 +1063,7 @@ class NavNode(Node):
 
         elif state == self.CAL_IMU :
             if stateChange :
-                self.tts(f"Release button when finished")
+                self.tts(f"Release button when IMU is calibrated")
 
             status = self.drivePattern(stateChange, 0, 0.5, 2.0, 0.5)
             if status==True :
@@ -1105,7 +1105,7 @@ class NavNode(Node):
             if stateChange :
                 self.buttonDoTrig = False
                 #TODO: message periodically till pressed
-                self.tts(f"Press button to start navigation")
+                self.tts(f"Press button to start robot")
 
             if self.buttonDoTrig==True :
                 next_state = self.NAV_GO_BUTT_PRESSED
@@ -1442,7 +1442,7 @@ class NavNode(Node):
         """
         if state_change :
             self.get_logger().info(f"{func} drive close to cone using cmd_vel and camera {state=}")
-            self.tts("Get closer to cone")
+            self.tts("Get close to cone")
 
         # Wait 2 seconds before starting - not sure why
         if (time.time_ns()*1e-9 - self.cd_timer) < 2.0 : return state

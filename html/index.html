@@ -132,6 +132,15 @@
         transition: background-color 250ms ease;
       }
 
+      .battery-indicator[data-warning="true"] {
+        color: #fb7185;
+        animation: battery-warning 1s steps(1, end) infinite;
+      }
+
+      .battery-indicator[data-warning="true"] .battery-bar {
+        background: #fb7185;
+      }
+
       .battery-indicator[data-available="true"][data-color="red"] .battery-bar[data-active="true"] {
         background: #fb7185;
       }
@@ -146,6 +155,12 @@
 
       .battery-indicator[data-available="false"] {
         color: #8290a3;
+      }
+
+      @keyframes battery-warning {
+        50% {
+          opacity: 0;
+        }
       }
 
       .temperature-indicator {
@@ -304,6 +319,10 @@
         transform-box: view-box;
         transform-origin: center;
         transition: transform 250ms ease;
+      }
+
+      .yaw-indicator[data-satellites-available="false"] .compass-needle {
+        visibility: hidden;
       }
 
       .compass-needle path {
@@ -473,7 +492,9 @@
               <span id="battery-voltage">---</span>
             </span>
           </div>
-          <p class="description">Battery voltage from <code>/battery_status</code>.</p>
+          <p class="description">
+            Battery voltage from <code>/battery_status</code>, scaled from 10.5 V to 12 V.
+          </p>
         </article>
 
         <article class="control-card">
@@ -533,6 +554,7 @@
             class="yaw-indicator"
             id="yaw-indicator"
             data-available="false"
+            data-satellites-available="false"
             role="img"
             aria-label="Yaw unavailable"
           >
@@ -661,21 +683,27 @@
           }
           batteryVoltage.textContent = "---";
           batteryIndicator.dataset.available = "false";
+          batteryIndicator.dataset.warning = "false";
           batteryIndicator.removeAttribute("data-color");
           batteryIndicator.setAttribute("aria-label", "Battery level unavailable");
           return;
         }
 
-        const percentage = Math.max(0, Math.min(100, ((voltage - 11.0) / 1.5) * 100));
+        const warning = voltage < 10.5;
+        const percentage = Math.max(0, Math.min(100, ((voltage - 10.5) / 1.5) * 100));
         const activeBars = Math.round((percentage / 100) * batteryBars.length);
-        const color = voltage < 11.2 ? "red" : voltage < 11.3 ? "yellow" : "green";
+        const color = voltage < 10.8 ? "red" : voltage < 11.2 ? "yellow" : "green";
         batteryBars.forEach((bar, index) => {
           bar.dataset.active = String(index < activeBars);
         });
         batteryVoltage.textContent = `${voltage.toFixed(2)} V`;
         batteryIndicator.dataset.available = "true";
+        batteryIndicator.dataset.warning = String(warning);
         batteryIndicator.dataset.color = color;
-        batteryIndicator.setAttribute("aria-label", `Battery voltage ${voltage.toFixed(2)} volts`);
+        batteryIndicator.setAttribute(
+          "aria-label",
+          `Battery voltage ${voltage.toFixed(2)} volts${warning ? ", critically low" : ""}`,
+        );
       }
 
       function setCpuTemperature(temperature) {
@@ -700,6 +728,7 @@
       function setGpsSiv(siv) {
         const available = Number.isInteger(siv);
         sivIndicator.dataset.available = String(available);
+        yawIndicator.dataset.satellitesAvailable = String(available && siv > 0);
         if (!available) {
           sivValue.textContent = "---";
           sivProgress.style.strokeDashoffset = "220";
@@ -711,7 +740,15 @@
         const percentage = Math.max(0, Math.min(1, (siv - 5) / 10));
         sivValue.textContent = String(siv);
         sivProgress.style.strokeDashoffset = String(220 * (1 - percentage));
-        sivIndicator.dataset.color = siv >= 5 && siv <= 15 ? "green" : "red";
+        if (siv > 0 && siv < 8) {
+          sivIndicator.dataset.color = "red";
+        } else if (siv >= 8 && siv <= 12) {
+          sivIndicator.dataset.color = "yellow";
+        } else if (siv > 12) {
+          sivIndicator.dataset.color = "green";
+        } else {
+          sivIndicator.removeAttribute("data-color");
+        }
         sivIndicator.setAttribute("aria-label", `${siv} GPS satellites in view`);
       }
 

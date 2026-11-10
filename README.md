@@ -525,16 +525,16 @@ defines those aliases.
 
 rc_web also copies html/index.html to /var/www/html to keep the web page up to date.
 The control page displays battery voltage from the ROS `/battery_status` topic
-with a bar indicator scaled from 11 V to 12.5 V (red below 11.2 V, yellow below
-11.3 V, and green from 11.3 V). CPU temperature from
+with a bar indicator scaled from 10.5 V to 12 V (red below 10.8 V, yellow below
+11.2 V, and green from 11.2 V). Below 10.5 V the battery indicator flashes red.
+The GPS satellite dial is red from 1 to 7 satellites, yellow from 8 through 12,
+and green above 12; the compass needle is hidden when no satellites are available.
+CPU temperature from
 `/sys/class/thermal/thermal_zone0/temp` is shown with a thermometer scaled from
 25 °C to 85 °C (green below 75 °C, yellow below 80 °C, and red from 80 °C).
 Either status is shown as unavailable when its sensor value cannot be read.
 
-On first launch the server generates a self-signed HTTPS certificate and
-private key under `~/.local/share/rc-control/`. Open
-`https://<robot-ip>:8765` from a browser on the robot's trusted LAN and accept
-the browser's self-signed certificate warning. Stop the backend with Ctrl+C
-when finished. HTTPS encrypts traffic but does not authenticate users; anyone
-who can reach the server can operate the controls, so do not expose it outside
-a trusted network.
+Open `http://<robot-ip>:8765` from a browser on the robot's trusted LAN. Stop
+the backend with Ctrl+C when finished. HTTP traffic is not encrypted or
+authenticated; anyone who can reach the server can operate the controls, so do
+not expose it outside a trusted network.

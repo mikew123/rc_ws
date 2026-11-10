@@ -145,7 +145,7 @@ class ControllerNode(Node):
         # round to 1 decimal place
         vbat = round(vbat, 1)
 
-        if vbat > 0 and vbat <= 11.1 :
+        if vbat > 0 and vbat <= 10.5 :
             self.get_logger().warning(f"Battery low {vbat=:.3f}")
         elif (time.time_ns()*1e-9 - self.bat_timer) > self.bat_per :
             self.get_logger().info(f"Battery {vbat=:.3f}")
@@ -161,19 +161,30 @@ class ControllerNode(Node):
         self.battery_status_msg_publisher.publish(bmsg)
 
         # Send battery status to the speaker
-        if ((vbat>11.1 and vbat<(self.lastVbat - 0.1)) or vbat<self.lastVbat) :
+        if ((vbat<10.5) or (vbat>10.9 and vbat<(self.lastVbat - 0.1)) or vbat<self.lastVbat) :
             if vbat == 0.0 :
                 self.tts("No battery")
-            elif vbat>11.1 :
-                self.tts(f"Battery {vbat}")
             elif vbat>10.9 :
+                self.tts(f"Battery {vbat}")
+            elif vbat>10.7 :
                 self.tts(f"Battery low: {vbat}")
-            elif vbat > 10.8 :
+            elif vbat > 10.5 :
                 self.tts(f"Warning! Battery {vbat}")
             else :
                 self.tts(f"DANGER! Battery {vbat}")
-        
-            self.lastVbat = vbat
+
+        if vbat < 10.3 :
+            # Activate kill switch mode when battery is CRTICALLY low
+            self.tts(f"Low battery induced Kill Switch")
+            msg = {"nav": {"kill":True}}
+            self.sendJsonMsg(msg)
+            time.sleep(0.1)
+            # release to cause robot to stop
+            msg = {"nav": {"kill":False}}
+            self.sendJsonMsg(msg)
+
+
+        self.lastVbat = vbat
 
     modeState:String = ""
     def processMode(self, mode:String) -> None :

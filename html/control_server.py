@@ -1,15 +1,12 @@
 #!/usr/bin/env python3
 
-import ipaddress
 import json
 import logging
 import math
 import os
 import signal
 import socket
-import ssl
 import subprocess
-import tempfile
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -20,9 +17,6 @@ HOST = "0.0.0.0"
 PORT = 8765
 HTML_FILE = Path(__file__).with_name("index.html")
 CPU_TEMPERATURE_FILE = Path("/sys/class/thermal/thermal_zone0/temp")
-CERTIFICATE_DIR = Path.home() / ".local" / "share" / "rc-control"
-CERTIFICATE_FILE = CERTIFICATE_DIR / "server.crt"
-PRIVATE_KEY_FILE = CERTIFICATE_DIR / "server.key"
 COMMANDS = frozenset({"rc", "rc_bag"})
 ROBOT_ACTIONS = frozenset({"start", "kill-switch"})
 jobs: dict[str, subprocess.Popen[bytes]] = {}
@@ -192,7 +186,7 @@ class ControlHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         if not self._same_origin():
-            self.send_error(403, "Requests must come from this page's HTTPS origin.")
+            self.send_error(403, "Requests must come from this page's HTTP origin.")
             return
 
         parts = self.path.strip("/").split("/")
@@ -235,7 +229,7 @@ class ControlHandler(BaseHTTPRequestHandler):
     def _same_origin(self) -> bool:
         origin = self.headers.get("Origin")
         host = self.headers.get("Host")
-        return bool(origin and host and origin == f"https://{host}")
+        return bool(origin and host and origin == f"http://{host}")
 
     def _start_job(self, alias_name: str) -> None:
         with jobs_lock:
@@ -414,82 +408,14 @@ def exit_on_signal(signum: int, frame: object) -> None:
     raise SystemExit(0)
 
 
-def ensure_certificate() -> None:
-    if CERTIFICATE_FILE.exists() and PRIVATE_KEY_FILE.exists():
-        return
-    if CERTIFICATE_FILE.exists() or PRIVATE_KEY_FILE.exists():
-        raise RuntimeError(
-            f"Only one TLS file exists in {CERTIFICATE_DIR}; remove the incomplete "
-            "certificate or restore its matching key."
-        )
-
-    hostname = socket.gethostname()
-    addresses = {"127.0.0.1"}
-    try:
-        for result in socket.getaddrinfo(hostname, None, family=socket.AF_INET):
-            addresses.add(str(ipaddress.ip_address(result[4][0])))
-    except socket.gaierror:
-        logging.warning("Could not resolve hostname %s for the TLS certificate", hostname)
-
-    names = {hostname, f"{hostname}.local"}
-    subject_alt_names = [f"DNS:{name}" for name in sorted(names)]
-    subject_alt_names.extend(f"IP:{address}" for address in sorted(addresses))
-    CERTIFICATE_DIR.mkdir(mode=0o700, parents=True, exist_ok=True)
-    try:
-        with tempfile.TemporaryDirectory(dir=CERTIFICATE_DIR) as temporary_dir:
-            certificate = Path(temporary_dir) / "server.crt"
-            private_key = Path(temporary_dir) / "server.key"
-            result = subprocess.run(
-                [
-                    "openssl",
-                    "req",
-                    "-x509",
-                    "-newkey",
-                    "rsa:2048",
-                    "-sha256",
-                    "-nodes",
-                    "-days",
-                    "365",
-                    "-keyout",
-                    str(private_key),
-                    "-out",
-                    str(certificate),
-                    "-subj",
-                    f"/CN={hostname}",
-                    "-addext",
-                    f"subjectAltName={','.join(subject_alt_names)}",
-                ],
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-            if result.returncode != 0:
-                raise RuntimeError(f"Could not generate HTTPS certificate: {result.stderr.strip()}")
-            private_key.chmod(0o600)
-            private_key.replace(PRIVATE_KEY_FILE)
-            certificate.replace(CERTIFICATE_FILE)
-    except FileNotFoundError as error:
-        raise RuntimeError("OpenSSL is required to generate the HTTPS certificate.") from error
-    logging.info("Generated a self-signed HTTPS certificate in %s", CERTIFICATE_DIR)
-
-
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     signal.signal(signal.SIGTERM, exit_on_signal)
-    try:
-        ensure_certificate()
-        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-        context.minimum_version = ssl.TLSVersion.TLSv1_2
-        context.load_cert_chain(CERTIFICATE_FILE, PRIVATE_KEY_FILE)
-    except (OSError, RuntimeError) as error:
-        raise SystemExit(str(error)) from error
-
     server = ThreadingHTTPServer((HOST, PORT), ControlHandler)
     server.daemon_threads = True
-    server.socket = context.wrap_socket(server.socket, server_side=True)
     for reader in status_readers.values():
         reader.start()
-    logging.info("RC control page listening on https://%s:%d", socket.gethostname(), PORT)
+    logging.info("RC control page listening on http://%s:%d", socket.gethostname(), PORT)
     try:
         server.serve_forever()
     finally:
