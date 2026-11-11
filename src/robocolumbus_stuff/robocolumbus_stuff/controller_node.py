@@ -141,15 +141,21 @@ class ControllerNode(Node):
         if "vbat" in status : self.processVbat(status["vbat"])
 
     # timer for battery report when not LOW
+    bat_killsw_set = False
     def processVbat(self, vbat) -> None :
         # round to 1 decimal place
         vbat = round(vbat, 1)
 
+        # Time interval to report battery regardless of conditions
+        bat_tick = (time.time_ns()*1e-9 - self.bat_timer) > self.bat_per
+        if bat_tick :
+            self.bat_timer = time.time_ns()*1e-9
+
         if vbat > 0 and vbat <= 10.5 :
             self.get_logger().warning(f"Battery low {vbat=:.3f}")
-        elif (time.time_ns()*1e-9 - self.bat_timer) > self.bat_per :
+        elif bat_tick :
             self.get_logger().info(f"Battery {vbat=:.3f}")
-            self.bat_timer = time.time_ns()*1e-9
+            
 
         # Send /battery_state topic message
         # TODO: add current and possibly cell voltages
@@ -161,7 +167,7 @@ class ControllerNode(Node):
         self.battery_status_msg_publisher.publish(bmsg)
 
         # Send battery status to the speaker
-        if ((vbat<10.5) or (vbat>10.9 and vbat<(self.lastVbat - 0.1)) or vbat<self.lastVbat) :
+        if ((bat_tick and (vbat<10.5)) or (vbat>10.9 and vbat<(self.lastVbat - 0.1))) :
             if vbat == 0.0 :
                 self.tts("No battery")
             elif vbat>10.9 :
@@ -173,16 +179,16 @@ class ControllerNode(Node):
             else :
                 self.tts(f"DANGER! Battery {vbat}")
 
-        if vbat < 10.3 :
+        if ((vbat < 10.3) and (bat_tick or (not self.bat_killsw_set))) :
             # Activate kill switch mode when battery is CRTICALLY low
             self.tts(f"Low battery induced Kill Switch")
             msg = {"nav": {"kill":True}}
             self.sendJsonMsg(msg)
-            time.sleep(0.1)
+            time.sleep(0.01)
             # release to cause robot to stop
             msg = {"nav": {"kill":False}}
             self.sendJsonMsg(msg)
-
+            self.bat_killsw_set = True
 
         self.lastVbat = vbat
 

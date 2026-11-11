@@ -1138,11 +1138,11 @@ class NavNode(Node):
         # Max distance to object from TOF sensors to avoid/slow
         tofObjMax = 0.50
         # Min distance to object from TOF sensors to stop
-        tofObjMin = 0.10
+        tofObjMin = 0.20
         # Max distance to object from Range sensors to avoid/slow
         rngObjMax = 0.50
         # Min distance to object from Range sensors to stop
-        rngObjMin = 0.20
+        rngObjMin = 0.30
 
         # Get front left and right range sensor data
         # this is currently using Lidar to emulate a range sensor
@@ -1224,10 +1224,10 @@ class NavNode(Node):
             l *= np.min((xc,xr,xl,xrr,xrl))
 
         if l == 0.0 :
-            self.get_logger().info(f"driveManObs: Stopped {lx=} {az=} {l=} {a=} {c_ob_dist=} {r_ob_dist=} {l_ob_dist} {rngr_ob_dist=} {rngl_ob_dist=}")
+            self.get_logger().info(f"driveManObs: Stopped {lx=} {az=} {l=} {a=} {c_ob_dist=} {r_ob_dist=} {l_ob_dist=} {rngr_ob_dist=} {rngl_ob_dist=}")
             self.tts(f"Obstacle stop while manual driving")
 
-        return (lx, az)
+        return (l, a)
 
 
     def drivePattern(self, init:bool, numMoves:int=0, speed:float=0.5, driveT:float=2.0, pauseT:float=0.5) -> bool :
@@ -1690,6 +1690,10 @@ class NavNode(Node):
             self.get_logger().info(f"{func} STOP {state=}")
             # self.nav.cancelTask()
             # self.tts("State 6: Stopping now")
+        
+        # Force velocities to zero
+        msg = Twist()
+        self.cmd_vel_publisher.publish(msg)
 
         next_state = state
         
