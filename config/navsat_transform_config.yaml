@@ -12,9 +12,10 @@ navsat_transform:
     broadcast_utm_transform: true
     publish_filtered_gps: true
     use_odometry_yaw: false # use IMU compass #true
-    wait_for_datum: true # ? does not seem to wait 
-    # If not set to gps close (default set to 0,0,0) the nav2 code errors and does not start
-    # I set a approx GPS here and then set the datum param with accurate current GPS
-    # datum - [lat, lon, yaw 0=East]
-    #datum: [32.77024839,  -96.83774057, 0.0] # home starting point
-    datum: [32.77022725,  -96.83773618, 0.0] # home starting point
+    # wait_for_datum: true # ? does not seem to wait 
+    # # If not set to gps close (default set to 0,0,0) the nav2 code errors and does not start
+    # # I set a approx GPS here and then set the datum param with accurate current GPS
+    # # datum - [lat, lon, yaw 0=East]
+    # #datum: [32.77024839,  -96.83774057, 0.0] # home starting point
+    # datum: [32.77022725,  -96.83773618, 0.0] # home 3 cone starting point
+    # datum: [32.77012263,  -96.83745529, 0.0] # home long street run starting point
