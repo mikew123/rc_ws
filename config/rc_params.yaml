@@ -392,8 +392,8 @@ planner_server:
     
     GridBased:
       # https://docs.ros.org/en/humble/p/nav2_smac_planner/
-      plugin: "nav2_smac_planner::SmacPlannerLattice"
-      # plugin: "nav2_smac_planner::SmacPlannerHybrid"
+      # plugin: "nav2_smac_planner::SmacPlannerLattice"
+      plugin: "nav2_smac_planner::SmacPlannerHybrid"
       tolerance: 0.5                      # tolerance for planning if unable to reach exact pose, in meters
       downsample_costmap: false           # whether or not to downsample the map
       downsampling_factor: 1              # multiplier for the resolution of the costmap layer (e.g. 2 on a 5cm costmap would be 10cm)
@@ -566,8 +566,8 @@ collision_monitor:
       # (here, the sub-polygons above already cover every velocity within +-1.0, including zero,
       # so it is never selected)
       stopped:
-        # points: "[[0.25, 0.25], [0.25, -0.25], [-0.25, -0.25], [-0.25, 0.25]]"
-        points: "[[0.50, 0.4], [0.50, -0.4], [-0.50, -0.4], [-0.50, 0.4]]"
+        points: "[[0.25, 0.25], [0.25, -0.25], [-0.25, -0.25], [-0.25, 0.25]]"
+        # points: "[[0.50, 0.4], [0.50, -0.4], [-0.50, -0.4], [-0.50, 0.4]]"
         linear_min: -1.0
         linear_max: 1.0
         theta_min: -1.0

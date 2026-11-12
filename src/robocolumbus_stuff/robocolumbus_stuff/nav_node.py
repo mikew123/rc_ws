@@ -491,59 +491,60 @@ class NavNode(Node):
         '''
 
         # get pose and datum from waypoints file
-        wpDatum:dict = self.wpSetDatum
+        # wpDatum:dict = self.wpSetDatum
         wpPose:dict  = self.wpSetPose
 
         if stateChange :
-            self.get_logger().info(f"setupNav: {wpPose=} {wpDatum=}")
+            # self.get_logger().info(f"setupNav: {wpPose=} {wpDatum=}")
+            self.get_logger().info(f"setupNav: {wpPose=}")
             
         if self.wpGps == True :
             # must use the compass while using gps
             self.wpCompass = True
-        else :
-            # No gps so datum is not used
-            wpDatum = None
+        # else :
+        #     # No gps so datum is not used
+        #     wpDatum = None
 
-        datum:list[float] = None
-        if self.wpGps == True :
-            # get the starting location datum
-            if wpDatum != None :
-                if not (("lat" in wpDatum) and ("lon" in wpDatum)) :
-                    # get datum lat,lon current location from gps signal
-                    if stateChange :
-                        self.get_logger().info(f"setupNav: Get current gps for the datum")
-                        self.tts("Get current gps for the datum")
+        # datum:list[float] = None
+        # if self.wpGps == True :
+        #     # get the starting location datum
+        #     if wpDatum != None :
+        #         if not (("lat" in wpDatum) and ("lon" in wpDatum)) :
+        #             # get datum lat,lon current location from gps signal
+        #             if stateChange :
+        #                 self.get_logger().info(f"setupNav: Get current gps for the datum")
+        #                 self.tts("Get current gps for the datum")
 
-                    datum = self.getCurrentGps()
-                    if datum == None :
-                        # wait for filtered GPS datum
-                        return False
+        #             datum = self.getCurrentGps()
+        #             if datum == None :
+        #                 # wait for filtered GPS datum
+        #                 return False
                     
-                    self.get_logger().info(f"setupNav: Use current gps as {datum=}")
-                    self.tts("use current gps datum lat={datum[0]:.0f} lon={datum[1]:.0f} yaw={datum[2]:.2f}")
+        #             self.get_logger().info(f"setupNav: Use current gps as {datum=}")
+        #             self.tts("use current gps datum lat={datum[0]:.0f} lon={datum[1]:.0f} yaw={datum[2]:.2f}")
 
-                else :
-                    # use datum in wp file
-                    if stateChange :
-                        self.get_logger().info(f"setupNav: Get datum from file {wpDatum=}")
-                    datum = [
-                        wpDatum["lat"],
-                        wpDatum["lon"],
-                        0.0 # yaw 0=East
-                    ] 
-            else : # no datum data in waypoint file
-                # get datum lat,lon current location from gps signal
-                if stateChange :
-                    self.get_logger().info(f"setupNav: Get current gps for the datum")
-                    self.tts("Get current gps for the datum")
+        #         else :
+        #             # use datum in wp file
+        #             if stateChange :
+        #                 self.get_logger().info(f"setupNav: Get datum from file {wpDatum=}")
+        #             datum = [
+        #                 wpDatum["lat"],
+        #                 wpDatum["lon"],
+        #                 0.0 # yaw 0=East
+        #             ] 
+        #     else : # no datum data in waypoint file
+        #         # get datum lat,lon current location from gps signal
+        #         if stateChange :
+        #             self.get_logger().info(f"setupNav: Get current gps for the datum")
+        #             self.tts("Get current gps for the datum")
 
-                datum = self.getCurrentGps()
-                if datum == None :
-                    # wait for filtered GPS datum
-                    return False
+        #         datum = self.getCurrentGps()
+        #         if datum == None :
+        #             # wait for filtered GPS datum
+        #             return False
 
-                self.get_logger().info(f"setupNav: Use current gps as {datum=}")
-                self.tts("use current gps datum lat={datum[0]:.0f} lon={datum[1]:.0f} yaw={datum[2]:.2f}")
+        #         self.get_logger().info(f"setupNav: Use current gps as {datum=}")
+        #         self.tts("use current gps datum lat={datum[0]:.0f} lon={datum[1]:.0f} yaw={datum[2]:.2f}")
 
             # create pose x,y,yaw from datum lat/lon and compass
             #TODO: get compass yaw, should we use a datum yaw if given?
@@ -553,7 +554,10 @@ class NavNode(Node):
                 if ("x" in wpPose) and ("y" in wpPose) :
                     x = wpPose["x"]
                     y = wpPose["y"]
-
+                else :
+                    x = 0.0
+                    y = 0.0
+                    
                 # get yaw to use in pose
                 if "rad" in wpPose :
                     yaw = wpPose["rad"]
@@ -561,12 +565,12 @@ class NavNode(Node):
                     yaw = wpPose["deg"]/180.0 * math.pi
 
             # alternate sources of pose yaw
-            if yaw == None :
-                if wpDatum != None :
-                    if "rad" in wpDatum :
-                        yaw = wpDatum["rad"]
-                    elif "deg" in wpDatum :
-                        yaw = wpDatum["deg"]/180.0 * math.pi
+            # if yaw == None :
+            #     if wpDatum != None :
+            #         if "rad" in wpDatum :
+            #             yaw = wpDatum["rad"]
+            #         elif "deg" in wpDatum :
+            #             yaw = wpDatum["deg"]/180.0 * math.pi
             if yaw == None :
                 if self.wpCompass == True :
                     # TODO: get yaw from compass
@@ -584,9 +588,9 @@ class NavNode(Node):
         if (not ("rad" in wpPose)) and ("deg" in wpPose):
             wpPose["rad"] = wpPose["deg"]/180.0 * math.pi
 
-        if datum != None :
-            self.send_set_param_request(self.navsat_transform_server_set_param_svc,
-                                    "datum",  datum, "navsat_transform_server")           
+        # if datum != None :
+        #     self.send_set_param_request(self.navsat_transform_server_set_param_svc,
+        #                             "datum",  datum, "navsat_transform_server")           
 
         if wpPose != None :
             pose = PoseWithCovarianceStamped()
@@ -594,7 +598,8 @@ class NavNode(Node):
             pose.pose.pose = self.createPose(wpPose["x"],wpPose["y"],wpPose["rad"])
             self.set_pose_msg_publisher.publish(pose)
 
-        self.get_logger().info(f"setupNav: {pose=} {datum=}")
+        # self.get_logger().info(f"setupNav: {pose=} {datum=}")
+        self.get_logger().info(f"setupNav: {wpPose["x"]=} {wpPose["y"]=} {wpPose["rad"]=} {pose=}")
         return True
 
     def cmp_azi_subscription_callback(self, msg:Float32) -> None :
