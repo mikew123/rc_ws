@@ -1473,9 +1473,12 @@ class NavNode(Node):
             # Stop motors and wait for kill switch not active
             # Motors are stopped by leaving velocities to msg defaults as 0
             pass
-        elif d <= 0 :
+        elif not self.cone_det_cam_true :            
             self.get_logger().info(f"{func} lost cone {state=}")
             next_state = 0
+        elif d <= 0 :
+            self.get_logger().info(f"{func} {d=} lost cone temporarily? {state=}")
+            # dont change state - wait for cone detect false or distance to be non-zero
         elif d > 2*self.cd_close_too_far_dist :
             self.get_logger().info(f"{func} cone is too far {d=} {state=}")
             next_state = 5 # back up
