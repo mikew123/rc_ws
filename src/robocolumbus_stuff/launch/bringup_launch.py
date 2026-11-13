@@ -174,7 +174,7 @@ def generate_launch_description():
                 # input topics
                 ("imu/data", "imu"),
                 ("gps/fix", "gps_nav"),
-                ("odometry/filtered", "odometry/global"),
+                ("odometry/filtered", "odometry/local"),
                 # output topics
                 ("gps/filtered", "gps/filtered"),
                 ("odometry/gps", "odometry/gps"),

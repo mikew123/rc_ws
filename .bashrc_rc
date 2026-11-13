@@ -45,6 +45,7 @@ ros2 bag record -s mcap \
          /odometry/global /odometry/local /odometry/gps /gps/filtered \
          /velocity_polygon_stop /polygon_slowdown /optimal_trajectory /plan \
          /json_msg /color/spatial_detections \
+         /color/image \
          --storage-config-file ~/rc_ws/mcap-config.yaml
 '
 

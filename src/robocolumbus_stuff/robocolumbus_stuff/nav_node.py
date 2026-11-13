@@ -850,15 +850,15 @@ class NavNode(Node):
             # change goal tolerance when approaching cone
             # self.send_set_param_request(self.controller_server_set_param_svc,
             #             "goal_checker.xy_goal_tolerance", self.sm_xy_goal_cone)
-            # Set which sensors are fused in EFK modules
-            # self.send_set_param_request(self.efk_global_set_param_svc, 
-            #             'publish_tf', False, "efk_global")
-            self.send_set_param_request(self.efk_global_set_param_svc, # GPS
-                        'odom1_config', self.efk_global_odom1_config_gpsDis, "efk_global")
-            self.send_set_param_request(self.efk_global_set_param_svc, # Compass
-                        'imu0_config', self.efk_global_imu0_config_yawDis, "efk_global")
-            # self.send_set_param_request(self.efk_local_set_param_svc, # Compass
-            #             'imu0_config', self.efk_local_imu0_config_yawDis, "efk_local")
+            # # Set which sensors are fused in EFK modules
+            # # self.send_set_param_request(self.efk_global_set_param_svc, 
+            # #             'publish_tf', False, "efk_global")
+            # self.send_set_param_request(self.efk_global_set_param_svc, # GPS
+            #             'odom1_config', self.efk_global_odom1_config_gpsDis, "efk_global")
+            # self.send_set_param_request(self.efk_global_set_param_svc, # Compass
+            #             'imu0_config', self.efk_global_imu0_config_yawDis, "efk_global")
+            # # self.send_set_param_request(self.efk_local_set_param_svc, # Compass
+            # #             'imu0_config', self.efk_local_imu0_config_yawDis, "efk_local")
             self.send_set_param_request(self.velocity_smoother_set_param_svc,
                         'max_velocity', self.velocity_smoother_max_velocity_cone, "velocity_smoother")
             
