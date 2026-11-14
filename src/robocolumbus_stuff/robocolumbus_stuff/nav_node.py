@@ -90,19 +90,19 @@ class NavNode(Node):
     cd_sub_state = -1
 
     # state=1 use /cone_point to get location to drive close to cone using /cmd_vel
-    cd_close_dist = 1.2 # distance from camera to cone
+    cd_close_dist = 1.5 # distance from camera to cone
     cd_close_lvel = 1.0
     cd_close_avel = (9.5*cd_close_lvel)/(2*math.pi)
     cd_close_too_far_dist = 20.0
 
     # state=2 use camera /cone_point to drive closer to cone using /cmd_vel
     cd_closer_dist = 0.5
-    cd_closer_lvel = 0.25
+    cd_closer_lvel = 0.10
     cd_closer_avel = (9.5*cd_closer_lvel)/(2*math.pi)
     cd_closer_too_far_dist = 2.0
 
     # state=3 use Lidar and /tof_fc_mid and fr and fl to "touch" cone using /cmd_vel
-    cd_touch_c_dist = 0.040
+    cd_touch_c_dist = 0.035
     cd_touch_rl_dist = 0.080
     cd_touch_lin_vel = 0.05
     cd_touch_ang_vel = cd_touch_lin_vel
@@ -226,39 +226,6 @@ class NavNode(Node):
         False, False, False 
         ]
 
-    # # Enables IMU yaw (compass) from efk_local
-    # efk_global_odom0_config_yawEn = [
-    #     False, False, False,
-    #     False, False, True,  # yaw from efk_local is used
-    #     True,  False, False, # x vel from wheel encoder
-    #     True, True, True,  # yaw vel from imu
-    #     False, False, False
-    #     ]
-    # # Disables IMU yaw (compass) from efk_local
-    # efk_global_odom0_config_yawDis = [
-    #     False, False, False,
-    #     False, False, False,
-    #     True,  False, False, # x vel from wheel encoder
-    #     True, True, True,  # yaw vel from imu
-    #     False, False, False
-    #     ]
-    # # Enables IMU yaw (compass)
-    # efk_local_imu0_config_yawEn = [
-    #     False, False, False,
-    #     False, False, True, # IMU yaw magnetic (compass)
-    #     False, False, False,
-    #     True, True, True, # roll,pitch,yaw vel from imu
-    #     False, False, False 
-    #     ]
-    # # Disables IMU yaw (compass)
-    # efk_local_imu0_config_yawDis = [
-    #     False, False, False,
-    #     False, False, False,
-    #     False, False, False,
-    #     True, True, True,  # roll,pitch,yaw vel from imu for steering feedback
-    #     False, False, False 
-    #     ]
-        
 
     # Velocity when going to way point
     velocity_smoother_max_velocity_wp = [1.5, 0.0, 2.0]
@@ -820,45 +787,21 @@ class NavNode(Node):
                 self.send_set_param_request(self.velocity_smoother_set_param_svc,
                             'max_velocity', self.velocity_smoother_max_velocity_wp, "velocity_smoother")
             else :
-                # self.send_set_param_request(self.efk_global_set_param_svc, 
-                #             'publish_tf', False, "efk_global")
-                # self.send_set_param_request(self.efk_local_set_param_svc, 
-                #             'publish_tf', True, "efk_local")
                 self.send_set_param_request(self.planner_server_set_param_svc, 
                             'GridBased.tolerance', 0.5, "planner_server") 
                 self.send_set_param_request(self.efk_global_set_param_svc, # GPS
                             'odom1_config', self.efk_global_odom1_config_gpsDis, "efk_global")
                 self.send_set_param_request(self.efk_global_set_param_svc, # Compass
                             'imu0_config', self.efk_global_imu0_config_yawDis, "efk_global")
-                # self.send_set_param_request(self.efk_global_set_param_svc, # Compass
-                #             'odom0_config', self.efk_global_odom0_config_yawEn, "efk_global")
-                # self.send_set_param_request(self.efk_local_set_param_svc, # Compass
-                #             'imu0_config', self.efk_local_imu0_config_yawDis, "efk_local")
                 self.send_set_param_request(self.velocity_smoother_set_param_svc,
                             'max_velocity', self.velocity_smoother_max_velocity_wp, "velocity_smoother")
 
             if self.wpCompass == True:
                 self.send_set_param_request(self.efk_global_set_param_svc, # Compass
                             'imu0_config', self.efk_global_imu0_config_yawEn, "efk_global")
-                # self.send_set_param_request(self.efk_global_set_param_svc, # Compass
-                #             'odom0_config', self.efk_global_odom0_config_yawEn, "efk_global")
-                # self.send_set_param_request(self.efk_local_set_param_svc, # Compass
-                #             'imu0_config', self.efk_local_imu0_config_yawEn, "efk_local")
                     
         elif state == self.T_GOTO_CONE :
             # configure navigation nodes parameters for goto cone
-            # change goal tolerance when approaching cone
-            # self.send_set_param_request(self.controller_server_set_param_svc,
-            #             "goal_checker.xy_goal_tolerance", self.sm_xy_goal_cone)
-            # # Set which sensors are fused in EFK modules
-            # # self.send_set_param_request(self.efk_global_set_param_svc, 
-            # #             'publish_tf', False, "efk_global")
-            # self.send_set_param_request(self.efk_global_set_param_svc, # GPS
-            #             'odom1_config', self.efk_global_odom1_config_gpsDis, "efk_global")
-            # self.send_set_param_request(self.efk_global_set_param_svc, # Compass
-            #             'imu0_config', self.efk_global_imu0_config_yawDis, "efk_global")
-            # # self.send_set_param_request(self.efk_local_set_param_svc, # Compass
-            # #             'imu0_config', self.efk_local_imu0_config_yawDis, "efk_local")
             self.send_set_param_request(self.velocity_smoother_set_param_svc,
                         'max_velocity', self.velocity_smoother_max_velocity_cone, "velocity_smoother")
             
@@ -966,7 +909,6 @@ class NavNode(Node):
             if self.wpConeTrue and self.cone_det_cam_true and (not self.last_touched_cone_close_true) :
                 if self.cancelNav2Task() :
                     self.tts("Cone detected while navigating to waypoint")
-                    # self.wpConeTouched = {}
                     next_state = self.T_GOTO_CONE
 
             elif self.nav.isTaskComplete() :
@@ -984,8 +926,6 @@ class NavNode(Node):
                     # try again
                     self.tts("Failed to navigate to way point")
                     # backup a bit on failure before trying again (stuck in bush)
-                    # next_state = self.T_WAIT_REQ
-                    # next_state = self.T_NAV_WP_AGAIN
                     next_state = self.T_NAV_WP_BACKUP
 
         # T_NAV_WP_BACKUP
@@ -1008,6 +948,7 @@ class NavNode(Node):
             self.cmd_vel_publisher.publish(msg)
 
         # T_GOTO_CONE
+        # These states do not use the navigator package 
         elif state == self.T_GOTO_CONE :
             if stateChange :
                 self.tts(f"Go to the cone")
@@ -1023,7 +964,7 @@ class NavNode(Node):
             # find cone and "touch" it
             done = self.cd_sm()
             if done : 
-                #go request next cone location
+                # request next cone location
                 self.get_logger().info(f"tc: done - touch cone succeeded")
                 self.tts("cone was touched")
                 # save touched cone actual XY location not waypoint
@@ -1321,6 +1262,7 @@ class NavNode(Node):
         return returnVal
 
     # Executes in timer callback group, sensor callbacks are in parallel
+    # These states do not use the navigator package
     def cd_sm(self) -> bool:
         func = "cone_sm:"
         done = False
@@ -1328,14 +1270,11 @@ class NavNode(Node):
         state_change:bool = False
         if self.cd_state != self.cd_last_state : 
             state_change = True
-            # self.nav.cancelTask() # cancel the running task when state changes
 
         ks = self.killSw
         ksc = self.killSwChange
         if ksc : 
             self.killSwChange = False
-            # Try canceling task 
-            # if ks : self.cancelNav2Task()
 
         state:int = self.cd_state
         next_state:int = state
@@ -1354,7 +1293,6 @@ class NavNode(Node):
             next_state = self.search_for_cone(func,state,state_change,ks,ksc)
 
         elif state == 1 :
-            # next_state = self.nav_to_cone(func,state,state_change,ks,ksc)
             next_state = self.drive_to_cone(func,state,state_change,ks,ksc)
                 
         elif state == 2 :
@@ -1382,13 +1320,13 @@ class NavNode(Node):
 
     wcScanInit = False
 
-    # state 0 - search for cone using camera  detection    
+    # state 0 - search for cone using camera  detection 
+    # drive in fwd/rev star pattern looking for the cone   
     def search_for_cone(self, func:str, state:int, state_change:bool, ks:bool, ksc:bool) -> int :
         if state_change :
             self.get_logger().info(f"{func} wait for cone detection {state=}")
             self.tts("Searching for a cone")
             self.wcScanInit = True
-            # self.nav.cancelTask()
 
         # get cone xy from camera detect
         x:float = self.cone_at_x_cam
@@ -1424,8 +1362,6 @@ class NavNode(Node):
         else :
             # slowly scan for cone
             if not killSwitchActive :
-                # if self.wcScanInit == False :
-                #     self.tts("Scanning for a cone")
 
                 #NOTE: kill sw processed in drivePattern
                 vel = 0.25
@@ -1443,19 +1379,14 @@ class NavNode(Node):
 
     #state 1 - use camera to locate cone and get close
     cd_sub_timer = 0
-
     def drive_to_cone(self, func:str, state:int, state_change:bool, ks:bool, ksc:bool) -> int :
         """
-        Alternate state=1 
         Drive to the cone after detection without using navigator
         Use /cone_point location to drive to it using /cmd_vel
         """
         if state_change :
             self.get_logger().info(f"{func} drive close to cone using cmd_vel and camera {state=}")
             self.tts("Get close to cone")
-
-        # Wait 2 seconds before starting - not sure why
-        if (time.time_ns()*1e-9 - self.cd_timer) < 2.0 : return state
 
         a:float = self.cone_at_a_cam
         d:float = self.cone_at_d_cam
@@ -1483,7 +1414,12 @@ class NavNode(Node):
             self.get_logger().info(f"{func} cone is too far {d=} {state=}")
             next_state = 5 # back up
         elif d > self.cd_close_dist :
-            msg.linear.x =  self.cd_close_lvel
+            if d > (self.cd_close_dist -1.0) :
+                msg.linear.x =  self.cd_close_lvel
+            else :
+                # lower speed to cd_closer_lvel
+                slowdown = (self.cd_close_lvel-self.cd_closer_lvel)*(1-(self.cd_close_dist-d))
+                msg.linear.x =  self.cd_close_lvel - slowdown
             # use angle to turn towards the cone
             msg.angular.z =  (a/0.393)*self.cd_close_avel/2
             # steer away from obstacle detected using TOF sensors
@@ -1512,9 +1448,6 @@ class NavNode(Node):
         if state_change :
             self.get_logger().info(f"{func} drive closer to cone using cmd_vel and camera {state=}")
             self.tts("Get closer to cone")
-
-        # Wait 2 seconds before starting - not sure why
-        if (time.time_ns()*1e-9 - self.cd_timer) < 2.0 : return state
 
         a:float = self.cone_at_a_cam
         d:float = self.cone_at_d_cam
@@ -1818,7 +1751,7 @@ class NavNode(Node):
 
         # adjust angle for camera angle in urdf
         # TODO: get from TF (urdf file)
-        urdf_a = 0.05
+        urdf_a = 0.07
         a += urdf_a
         # limit +-pi
         if urdf_a>+math.pi : urdf_a -= math.pi

@@ -469,13 +469,9 @@ behavior_server:
     # behavior_plugins: ["backup", "drive_on_heading", "assisted_teleop", "wait"]
     spin:
       plugin: "nav2_behaviors::Spin"
-      # seetings attemp to effectively disable spin
-      is_recovery: True #False
-      spin_dist: 0.01
-      time_allowance: 0.1
     backup:
       plugin: "nav2_behaviors::BackUp"
-      backup_speed: 0.1
+      minimum_speed: 0.1
     drive_on_heading:
       plugin: "nav2_behaviors::DriveOnHeading"
     wait:
