@@ -19,6 +19,7 @@ import tf_transformations
 import json
 import numpy as np
 import utm
+import random
 
 import yaml
 from pathlib import Path
@@ -862,6 +863,9 @@ class NavNode(Node):
 
         # T_NAV_WP_AGAIN
         elif state == self.T_NAV_WP_AGAIN :
+            if stateChange :
+                self.tts("Attempt to navigate to way point location again")
+
             next_state = self.T_NAV_WP
 
         # T_NAV_WP
@@ -939,10 +943,13 @@ class NavNode(Node):
             if time.monotonic() >= self.wpStopTime :
                 (msg.linear.x, msg.angular.z) = (0.0, 0.0)
                 next_state = self.T_NAV_WP_AGAIN
-                self.tts("Attempt to navigate to way point location again")
             else :
-                speed = 0.1
-                (msg.linear.x, msg.angular.z) = self.driveManObs(speed, -2*speed)
+                speed = -0.1
+                lx = speed
+                az = random.uniform(-2.0,2.0)*speed
+                (msg.linear.x, msg.angular.z) = self.driveManObs(lx, az)
+                if msg.linear.x == 0.0 :
+                    next_state = self.T_NAV_WP_AGAIN
 
             # drive robot command
             self.cmd_vel_publisher.publish(msg)
