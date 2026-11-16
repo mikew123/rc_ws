@@ -16,11 +16,32 @@ bt_navigator:
     wait_for_service_timeout: 1000
     action_server_result_timeout: 60.0 #900.0
 
-    bt_search_directories:
-      - $(find-pkg-share nav2_bt_navigator)/behavior_trees
-      # - $(find-pkg-share my_custom_package)/behavior_trees
+    # bt_search_directories:
+    #   - $(find-pkg-share nav2_bt_navigator)/behavior_trees/
+    #   # - $(find-pkg-share my_custom_package)/behavior_trees
 
     navigators: ["navigate_to_pose", "navigate_through_poses"]
+
+    # possible "navigate_to_pose" behavioral trees
+    # navigate_to_pose_w_replanning_and_recovery.xml
+        #   This Behavior Tree replans the global path periodically at 1 Hz and it also has
+        #   recovery actions specific to planning / control as well as general system issues.
+        #   This will be continuous if a kinematically valid planner is selected.
+    # navigate_to_pose_w_replanning_goal_patience_and_recovery.xml
+        # This BT has all the functionalities of navigate_to_pose_w_replanning_and_recovery.xml,
+        # with an additional feature to cancel the control closer to the goal proximity and
+        # make the robot wait for a specific time, to see if the obstacle clears out before
+        # navigating along a significantly longer path to reach the goal location.
+    # nav_to_pose_with_consistent_replanning_and_if_path_becomes_invalid.xml
+        # This Behavior Tree replans the global path once every 15 seconds or if the path becomes invalid. It also has
+        # recovery actions specific to planning / control as well as general system issues.
+        # This will be continuous if a kinematically valid planner is selected.
+        
+    # default_nav_to_pose_bt_xml: "/opt/ros/jazzy/share/nav2_bt_navigator/behavior_trees/navigate_to_pose_w_replanning_and_recovery.xml"
+    default_nav_to_pose_bt_xml: "$(find-pkg-share nav2_bt_navigator)/behavior_trees/navigate_to_pose_w_replanning_and_recovery_nospin.xml"
+    # default_nav_to_pose_bt_xml: "$(find-pkg-share nav2_bt_navigator)/behavior_trees/navigate_to_pose_w_replanning_goal_patience_and_recovery_nospin.xml"
+    # default_nav_to_pose_bt_xml: "$(find-pkg-share nav2_bt_navigator)/behavior_trees/nav_to_pose_with_consistent_replanning_and_if_path_becomes_invalid_nospin.xml"
+
     navigate_to_pose:
       plugin: "nav2_bt_navigator::NavigateToPoseNavigator"
     navigate_through_poses:
@@ -582,7 +603,7 @@ collision_monitor:
       points: "[[1.2, 0.0], [0.8, 0.5], [-0.8, 0.5], [-1.2, 0.0], [-0.8, -0.5], [0.8, -0.5]]"
       action_type: "slowdown"
       min_points: 4  # max_points: 3 for Humble
-      slowdown_ratio: 0.3
+      slowdown_ratio: 0.5
       visualize: True
       polygon_pub_topic: "polygon_slowdown"
     observation_sources: ["scan", "tof_rc", "tof_rl", "tof_rr", "tof_fc", "tof_fl", "tof_fr"]

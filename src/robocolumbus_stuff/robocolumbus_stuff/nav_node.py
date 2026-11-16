@@ -1686,48 +1686,48 @@ class NavNode(Node):
 
         return (d, a, rx, ry, ra)
 
-    def gotoConeXY(self, cx:float, cy:float, stop_dist:float, t) -> float:
-        """
-        The navigation is sent and is non-blocking, caller needs to check when finished.
-        Go to the cone location, but stop at a given distance to the cone.
-        The coordinate cx,cy is relative to tof_fc sensor.
-        The stop_dist is the distance from the cone to stop.
-        The t is the time to drive before returning .
-        Returns distance to the cone, -1 if it did not succeed.
-        """
+    # def gotoConeXY(self, cx:float, cy:float, stop_dist:float, t) -> float:
+    #     """
+    #     The navigation is sent and is non-blocking, caller needs to check when finished.
+    #     Go to the cone location, but stop at a given distance to the cone.
+    #     The coordinate cx,cy is relative to tof_fc sensor.
+    #     The stop_dist is the distance from the cone to stop.
+    #     The t is the time to drive before returning .
+    #     Returns distance to the cone, -1 if it did not succeed.
+    #     """
 
-        if cx!=0 and cy!=0 :
-            # self.get_logger().info(f"gotoConeXY: cone at {cx=:.3f} {cy=:.3f}")
+    #     if cx!=0 and cy!=0 :
+    #         # self.get_logger().info(f"gotoConeXY: cone at {cx=:.3f} {cy=:.3f}")
             
-            (_, _, rx, ry, ra) = self.get_dist_from_robot(cx, cy)
-            cd = math.sqrt(cx*cx + cy*cy)
-            ca = math.atan2(cy,cx)
+    #         (_, _, rx, ry, ra) = self.get_dist_from_robot(cx, cy)
+    #         cd = math.sqrt(cx*cx + cy*cy)
+    #         ca = math.atan2(cy,cx)
 
-            self.get_logger().info(f"gotoConeXY: robot at {rx=:.3f} {ry=:.3f}, {ra=:.3f} cone at relative {cx=:.3f} {cy=:.3f} {cd=:.3f} {ca=:.3f}")
+    #         self.get_logger().info(f"gotoConeXY: robot at {rx=:.3f} {ry=:.3f}, {ra=:.3f} cone at relative {cx=:.3f} {cy=:.3f} {cd=:.3f} {ca=:.3f}")
 
-            if cd < stop_dist : return cd
+    #         if cd < stop_dist : return cd
 
-            # calculate using cone dist and angle since we need to stop navigating before cone location 
-            # calc angle from "map" to cone to drive with heading direct to cone
-            a = ra + ca
-            # adjust the distance stop at the cost map boundary
-            sd = cd - stop_dist
-            # calc goto coordinates x,y for "map"->cone
-            x = rx + sd*math.cos(a)
-            y = ry + sd*math.sin(a)
+    #         # calculate using cone dist and angle since we need to stop navigating before cone location 
+    #         # calc angle from "map" to cone to drive with heading direct to cone
+    #         a = ra + ca
+    #         # adjust the distance stop at the cost map boundary
+    #         sd = cd - stop_dist
+    #         # calc goto coordinates x,y for "map"->cone
+    #         x = rx + sd*math.cos(a)
+    #         y = ry + sd*math.sin(a)
             
-            goto_pose = self.createPoseStamped(x,y,a,"map")
+    #         goto_pose = self.createPoseStamped(x,y,a,"map")
 
-            self.get_logger().info(f"gotoConeXY: goto {x=:.3f} {y=:.3f} {sd=:.3f} {a=:.3f} {t=:.3f}")
+    #         self.get_logger().info(f"gotoConeXY: goto {x=:.3f} {y=:.3f} {sd=:.3f} {a=:.3f} {t=:.3f}")
 
-            # non-blocking
-            self.nav.goToPose(goto_pose)
+    #         # non-blocking
+    #         self.nav.goToPose(goto_pose)
 
-        else :
-            self.get_logger().info(f"gotoXY: No cone detected")
-            cd=-1.0
+    #     else :
+    #         self.get_logger().info(f"gotoXY: No cone detected")
+    #         cd=-1.0
 
-        return float(cd)
+    #     return float(cd)
 
 
 
