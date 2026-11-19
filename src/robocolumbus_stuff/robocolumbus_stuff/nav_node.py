@@ -21,6 +21,8 @@ import numpy as np
 import utm
 import random
 
+import os
+
 import yaml
 from pathlib import Path
 from pprint import pprint, pformat
@@ -827,6 +829,12 @@ class NavNode(Node):
         if state == self.T_INIT_WAIT :
             self.tts("wait for nav 2")
             time.sleep(20)
+
+            # set xy_goal_tolerance to 3M when gps is enabled
+            # using the parameter set code does not set this parameter
+            # the ros2 command line works
+            if self.wpGps == True :
+                os.system("ros2 param set controller_server goal_checker.xy_goal_tolerance 3.0")
 
             # calibrate compass if used
             if (self.wpCompass == True) or (self.wpGps == True) :

@@ -15,13 +15,13 @@ nav_fname = "sambashare-link/nav_files/RoboColumbus.yml"
 with open(nav_fname, 'r') as f:
     data = yaml.load(f, Loader=yaml.SafeLoader)
 
-# use gps_enabled to configure xy_goal_tolerance
-gps_enabled = data['config']['gps']
-if gps_enabled :
-    xy_goal_tolerance = 3.0 # to minimize wander while gps drifts
-else :
-    xy_goal_tolerance = 1.0 #0.3
-print(f"{gps_enabled=} {xy_goal_tolerance=}")
+# # use gps_enabled to configure xy_goal_tolerance
+# gps_enabled = data['config']['gps']
+# if gps_enabled :
+#     xy_goal_tolerance = 3.0 # to minimize wander while gps drifts
+# else :
+#     xy_goal_tolerance = 1.0 #0.3
+# print(f"{gps_enabled=} {xy_goal_tolerance=}")
 
 import launch
 import launch_ros.actions
@@ -196,7 +196,7 @@ def generate_launch_description():
                 "map": "maps/2000x2000_empty_map.yaml",
                 # "use_localization" : "False",
                 "use_localization" : "True",
-                "goal_checker.xy_goal_tolerance" : f"{xy_goal_tolerance}",
+                # "controller_server.goal_checker.xy_goal_tolerance" : f"{xy_goal_tolerance}",
             }.items()
         ),
 
