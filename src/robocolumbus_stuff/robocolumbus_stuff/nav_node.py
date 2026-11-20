@@ -381,7 +381,14 @@ class NavNode(Node):
         if "waypoints" in doc :
             self.wpWaypoints = doc["waypoints"]
 
-        # convert lat lon waypoints to x y
+        
+    def wpFileLatLonToXY(self) -> None : 
+        """
+        convert lat lon waypoints extracted from the nav file to x y coordinates
+        uses yaw to orient the XY coordinates releative to the initial pose yaw
+        if no lat lon then dont create x y values
+        """
+
         wpoints = self.wpWaypoints
         if self.wpSetPose != None :
             if ("lat" in self.wpSetPose) and ("lon" in self.wpSetPose) :
@@ -394,11 +401,25 @@ class NavNode(Node):
             else :
                 poseLat = None
                 poseLon = None
-                self.get_logger().error(f"readWaypointsFile: pose does not have lat+lon")
+                self.get_logger().error(f"wpFileLatLonToXY: pose does not have lat+lon")
+
+            if "rad" in self.wpSetPose :
+                poseRad = self.wpSetPose["rad"]
+            elif "deg" in self.wpSetPose :
+                poseRad = self.wpSetPose["deg"]/180.0 * math.pi
+            elif self.wpCompass or self.wpGps :
+                # get compass heading for pose
+                poseRad = self.cmpAzi
+            else :
+                poseRad = 0.0
+
+            # ensure pose has yaw set
+            self.wpSetPose["rad"] = poseRad
+
         else :
             poseLat = None
             poseLon = None
-            self.get_logger().error(f"readWaypointsFile: there is no pose")
+            self.get_logger().error(f"wpFileLatLonToXY: there is no pose")
 
         if wpoints != None :
             length = len(wpoints) # num of waypoints in file
@@ -412,27 +433,31 @@ class NavNode(Node):
                     if ("lat" in wp) and ("lon" in wp) :
                         lat = wp["lat"]
                         lon = wp["lon"]
-                        (x,y) = self.latLon_to_XY(poseLat, poseLon, lat, lon)
+                        # (x,y) = self.latLon_to_XY(poseLat, poseLon, poseRad, lat, lon)
+                        (x,y) = self.latLon_to_XY(poseLat, poseLon, 0.0, lat, lon)
                         wp["x"] = x
                         wp["y"] = y
                         self.wpWaypoints[n] = wp
-                    # else :
-                    #     self.get_logger().error(f"readWaypointsFile: no lat lon in {wp=}")
 
 
-            self.get_logger().info(f"readWaypointsFile: {self.wpSetPose=} {self.wpWaypoints=}")
+            self.get_logger().info(f"wpFileLatLonToXY: {self.wpSetPose=} {self.wpWaypoints=}")
 
-    def latLon_to_XY(self, datum_lat:float, datum_lon:float, lat:float, lon:float) -> tuple :
+    def latLon_to_XY(self,pose_lat:float,pose_lon:float,pose_rad:float, 
+                     lat:float, lon:float) -> tuple :
         '''
         Convert GPS latitude,logitude to map X,Y 
         X,Y are relative to the datum lat,lon
         returns tuple (x,y)
         '''
         # convert lat,lon to map x,y
-        (deast, dnorth, dn, ds) = utm.from_latlon(datum_lat, datum_lon)
+        (deast, dnorth, dn, ds) = utm.from_latlon(pose_lat,pose_lon)
         (peast, pnorth, pn, ps) = utm.from_latlon(lat, lon)
-        x = peast - deast
-        y = pnorth - dnorth
+        east = peast - deast
+        north = pnorth - dnorth
+        cos_pose = math.cos(pose_rad)
+        sin_pose = math.sin(pose_rad)
+        x = east * cos_pose + north * sin_pose
+        y = -east * sin_pose + north * cos_pose
         if dn != pn :
             self.logger().error(f"latLon_to_XY: UTM zone number mismatch {dn=} {pn=}")
         return (x,y)
@@ -460,61 +485,25 @@ class NavNode(Node):
         returns True if setup OK
         '''
 
+        # convert wp file lat lon to xy
+        self.wpFileLatLonToXY()
+
+        # set xy_goal_tolerance to 3M when gps is enabled
+        # using the parameter set code does not set this parameter
+        # the ros2 command line works
+        if self.wpGps == True :
+            os.system("ros2 param set controller_server goal_checker.xy_goal_tolerance 3.0")
+
         # get pose and datum from waypoints file
         # wpDatum:dict = self.wpSetDatum
         wpPose:dict  = self.wpSetPose
 
         if stateChange :
-            # self.get_logger().info(f"setupNav: {wpPose=} {wpDatum=}")
             self.get_logger().info(f"setupNav: {wpPose=}")
             
         if self.wpGps == True :
             # must use the compass while using gps
             self.wpCompass = True
-        # else :
-        #     # No gps so datum is not used
-        #     wpDatum = None
-
-        # datum:list[float] = None
-        # if self.wpGps == True :
-        #     # get the starting location datum
-        #     if wpDatum != None :
-        #         if not (("lat" in wpDatum) and ("lon" in wpDatum)) :
-        #             # get datum lat,lon current location from gps signal
-        #             if stateChange :
-        #                 self.get_logger().info(f"setupNav: Get current gps for the datum")
-        #                 self.tts("Get current gps for the datum")
-
-        #             datum = self.getCurrentGps()
-        #             if datum == None :
-        #                 # wait for filtered GPS datum
-        #                 return False
-                    
-        #             self.get_logger().info(f"setupNav: Use current gps as {datum=}")
-        #             self.tts("use current gps datum lat={datum[0]:.0f} lon={datum[1]:.0f} yaw={datum[2]:.2f}")
-
-        #         else :
-        #             # use datum in wp file
-        #             if stateChange :
-        #                 self.get_logger().info(f"setupNav: Get datum from file {wpDatum=}")
-        #             datum = [
-        #                 wpDatum["lat"],
-        #                 wpDatum["lon"],
-        #                 0.0 # yaw 0=East
-        #             ] 
-        #     else : # no datum data in waypoint file
-        #         # get datum lat,lon current location from gps signal
-        #         if stateChange :
-        #             self.get_logger().info(f"setupNav: Get current gps for the datum")
-        #             self.tts("Get current gps for the datum")
-
-        #         datum = self.getCurrentGps()
-        #         if datum == None :
-        #             # wait for filtered GPS datum
-        #             return False
-
-        #         self.get_logger().info(f"setupNav: Use current gps as {datum=}")
-        #         self.tts("use current gps datum lat={datum[0]:.0f} lon={datum[1]:.0f} yaw={datum[2]:.2f}")
 
             # create pose x,y,yaw from datum lat/lon and compass
             #TODO: get compass yaw, should we use a datum yaw if given?
@@ -533,34 +522,17 @@ class NavNode(Node):
                     yaw = wpPose["rad"]
                 elif "deg" in wpPose :
                     yaw = wpPose["deg"]/180.0 * math.pi
+                else :
+                    yaw = 0.0
 
-            # alternate sources of pose yaw
-            # if yaw == None :
-            #     if wpDatum != None :
-            #         if "rad" in wpDatum :
-            #             yaw = wpDatum["rad"]
-            #         elif "deg" in wpDatum :
-            #             yaw = wpDatum["deg"]/180.0 * math.pi
-            if yaw == None :
-                if self.wpCompass == True :
-                    # TODO: get yaw from compass
-                    # yaw = 0.0
-                    yaw = self.cmpAzi
+                wpPose = {"x":x,"y":y,"rad":yaw}
+
             else :
-                yaw = 0.0
-
-            wpPose = {"x":x,"y":y,"rad":yaw}
-
-        if wpPose == None :
-            wpPose = {"x":0.0,"y":0.0,"rad":0.0}
+                wpPose = {"x":0.0,"y":0.0,"rad":0.0}
 
         # if pose orientation in degrees convert to radians
         if (not ("rad" in wpPose)) and ("deg" in wpPose):
             wpPose["rad"] = wpPose["deg"]/180.0 * math.pi
-
-        # if datum != None :
-        #     self.send_set_param_request(self.navsat_transform_server_set_param_svc,
-        #                             "datum",  datum, "navsat_transform_server")           
 
         if wpPose != None :
             pose = PoseWithCovarianceStamped()
@@ -568,7 +540,6 @@ class NavNode(Node):
             pose.pose.pose = self.createPose(wpPose["x"],wpPose["y"],wpPose["rad"])
             self.set_pose_msg_publisher.publish(pose)
 
-        # self.get_logger().info(f"setupNav: {pose=} {datum=}")
         self.get_logger().info(f"setupNav: {wpPose["x"]=} {wpPose["y"]=} {wpPose["rad"]=} {pose=}")
         return True
 
