@@ -492,6 +492,7 @@ class NavNode(Node):
         # using the parameter set code does not set this parameter
         # the ros2 command line works
         if self.wpGps == True :
+            self.get_logger().info(f"setupNav: setting xy_goal_tolerance to 3.0")
             os.system("ros2 param set controller_server goal_checker.xy_goal_tolerance 3.0")
 
         # get pose and datum from waypoints file
@@ -805,6 +806,7 @@ class NavNode(Node):
             # using the parameter set code does not set this parameter
             # the ros2 command line works
             if self.wpGps == True :
+                self.get_logger().info(f"setupNav: setting xy_goal_tolerance to 3.0")
                 os.system("ros2 param set controller_server goal_checker.xy_goal_tolerance 3.0")
 
             # calibrate compass if used
