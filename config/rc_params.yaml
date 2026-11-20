@@ -90,9 +90,9 @@ controller_server:
       ax_min: -4.0
       ay_max: 0.0
       az_max: 3.5
-      vx_std: 0.2 #### #1.0 #0.5 #0.2
+      vx_std: 0.6 #### #1.0 #0.5 #0.2
       vy_std: 0.2
-      wz_std: 0.8 #0.4
+      wz_std: 1.2 #0.4
       vx_max: 1.5 #1.0 
       vx_min: -1.5 #-1.0
       vy_max: 0.0
