@@ -442,39 +442,65 @@ The 3rd party libraries are used by launching them within the rc25 launch file<b
 ## TF link map
 The oak-d physical component TF frames are created in ros_coneslayer and connected to in the URDF file<br>
 The complete TF frame map (pdftoppm -png rc25_08_17_25.pdf rc25_08_17_25):<br>
-<img src="support/rc25_08_17_25-1.png"><br>
+<img src="support/frames_2026-11-22_17.40.31-1.png"><br>
 
 ## Waypoints
 The way points are set using a YAML formated waypoints file. The starting pose and waypoints can be in either X,Y or lat/lon format. The GPS can be enabled or not. The waypoints file are in the /sambashare directory so that the PC can easily acces them remotely<br>
 
 ## Using GPS
-https://docs.ros.org/en/melodic/api/robot_localization/html/integrating_gps.html<br>
-<img src="support/Gps_localization.jpg"><br>
-I ended up connecting the odometry output of the EFK local node to the EFK global (GPS) node instead of connecting EFK global to IMU and Engine odometry<br>
+Configured using : <br>
+https://deepwiki.com/locusrobotics/roscon-uk-2025-se-workshop/2.4-task-4:-gps-integration-with-navsat_transform_node <br>
+
+<img src="support\Gps_localization.png"><br>
+I changed the sensor interconnects in 2026 to match the previous documentation. GPS seems to wprk a lot better.<br>
 There are seperate param.yaml files for the EFK_local, EFK_global and navsat_transform nodes<>
 The AMCL node is disabled in the nav2 params file, but needed to set some other parameters to make AMCL happy.<br>
 The navsat_transform creates the map->odom TF for localization correction using GPS.<br>
 ### GPS ROS odd stuff
-I had to set the GPS datum in the navsat_transform params even though I set wait_for_datum: true!! It must be relatively close to the actual GPS waypoints location. Example: I set the datum in the file to my house in Dallas for testing, but that was not close enough for the competition in Farmersville!!<br>
 I got best results updating the dataum param with actual GPS value read from the reciever at the initial position<br>
+I seemed to need to set the pose in the waypoint file to the gps coordinates of the start line, the compass YAW was used for orientation in real time.<br>
 The nav2 navigation needs the X,Y coordinates relative to the initial position, it does not accept GPS lat,lon which are converted to X,Y meters using UTM conversions.
+There is a module in nav_node.py that converts the ~/sambashare-link/nav_files/RoboColumbus.yml waypoints file gps lat/lon to X/Y meters for each waypoint relative to the pose in the file. The resulting X/Y coordinates are oriented in the East direction to math the map , direction 0.0 is East.<br>
 
-# TODO for 2026:
+
+# RC web controls
+
+run "rc_web" from command line to start a web control page. I use Terminus on my phone to initialize the web server on the robot.
+
+The control page starts and stops the `rc` and `rc_bag` aliases in separate
+process groups. Run its backend as the same user whose interactive Bash shell
+defines those aliases.
+
+rc_web also copies html/index.html to /var/www/html to keep the web page up to date.
+The control page displays battery voltage from the ROS `/battery_status` topic
+with a bar indicator scaled from 10.5 V to 12 V (red below 10.8 V, yellow below
+11.2 V, and green from 11.2 V). Below 10.5 V the battery indicator flashes red.
+The GPS satellite dial is red from 1 to 7 satellites, yellow from 8 through 12,
+and green above 12; the compass needle is hidden when no satellites are available.<br>
+CPU temperature from
+`/sys/class/thermal/thermal_zone0/temp` is shown with a thermometer scaled from
+25 °C to 85 °C (green below 75 °C, yellow below 80 °C, and red from 80 °C).
+Either status is shown as unavailable when its sensor value cannot be read.<br>
+GPS satelites in view using the /gps_siv topic. The range of the gauge is 5 to 15 and the actual number of satelites is displayed as a number.<br>
+YAW Compass is displayed using the /cmp_azi topic, North points UP.<br>
+
+Open `http://<robot-ip>:8765` from a browser on the robot's trusted LAN. Stop
+the backend with Ctrl+C when finished. HTTP traffic is not encrypted or
+authenticated; anyone who can reach the server can operate the controls, so do
+not expose it outside a trusted network.<br>
+
+This is an image of the web server page on my phone. It came out a bit long in this document:<br>
+<img src="support\rc_webserver_page.png" height="500"><br>
+
+
+# TODO for 2027:
 ## Electrical Mechanical
-### Put electronics inside jeep - DONE
-- Lidar mounted on roof
-- Does camera detect cones through existing windshield? - YES
-- NOTE: The camera overheats and needed a fan to cool.
 
 ### Other
-- Improve external DC power - YES
 - Work on transmission and drive chain: noticable grease/oil and odd noises
 
 ## Code
-- Detect cone while going to waypoint and then approach it before getting to waypoint
-- If cone is not detected or lost detetction at waypoint go to points close by (say +-5M) if no cone is found go to next waypoint
-- Avoid obstacles while "manually" searching in movement pattern for the cone 
-- Convert nodes to LifeCycle
+- Convert nodes to LifeCycle??? I couldn't figure it out for RoboRama code!!
 - Manage modified coneslayer ROS package better, maybe add to the rc25 workspace and/or make a fork and clean up mods and submit for inclusion in github.
 
 ## Simulation?
@@ -487,54 +513,3 @@ The nav2 navigation needs the X,Y coordinates relative to the initial position, 
 ## RTK GPS?
 - Update to RTK $$
 
-# Rebuild with electronics inside cabin - DONE
-
-Photos of the jeep chassis as well as the electronics mounted in the jeep body and outside the body:
-
-Jeep chassis showing the loose cables that go to the engine controller box<br>
-You can see the Lidar mounted on the roof<br>
-<img src="support/car_chassis_no_electronics.jpg"><br>
-
-The underside of the electronics showing the power and USB cables to the engine controller box<br>
-<img src="support/car_undercarriage.jpg"><br>
-
-Electronics in cabin with the Lidar on the roof<br>
-<img src="support/car_with_stuff_inside.jpg"><br>
-
-NOTE: needs updated pics with new WiFi and camera fan and external 12V jack and Pi5 reset switch.<br>
-
-NOTE: The front and rear TOF sensors need to be mounted on the jeep front and rear
-
-
-Electronics mounted on board front and rear view<br>
-Note the WiFi antennas in the back<br>
-<img src="support/electronics_fron_view.jpg"><br>
-<img src="support/electronics_on _board.jpg"><br>
-
-View through windows<br>
-<img src="support/view_back_window.jpg"><br>
-<img src="support/view_through_side_window.jpg"><br>
-
-# RC web controls
-
-run "rc_web" from command line to start a web control page.
-
-The control page starts and stops the `rc` and `rc_bag` aliases in separate
-process groups. Run its backend as the same user whose interactive Bash shell
-defines those aliases.
-
-rc_web also copies html/index.html to /var/www/html to keep the web page up to date.
-The control page displays battery voltage from the ROS `/battery_status` topic
-with a bar indicator scaled from 10.5 V to 12 V (red below 10.8 V, yellow below
-11.2 V, and green from 11.2 V). Below 10.5 V the battery indicator flashes red.
-The GPS satellite dial is red from 1 to 7 satellites, yellow from 8 through 12,
-and green above 12; the compass needle is hidden when no satellites are available.
-CPU temperature from
-`/sys/class/thermal/thermal_zone0/temp` is shown with a thermometer scaled from
-25 °C to 85 °C (green below 75 °C, yellow below 80 °C, and red from 80 °C).
-Either status is shown as unavailable when its sensor value cannot be read.
-
-Open `http://<robot-ip>:8765` from a browser on the robot's trusted LAN. Stop
-the backend with Ctrl+C when finished. HTTP traffic is not encrypted or
-authenticated; anyone who can reach the server can operate the controls, so do
-not expose it outside a trusted network.
