@@ -1,4 +1,7 @@
 # Transform GPS nav data to ros2 map based data
+# Configured using : 
+# https://deepwiki.com/locusrobotics/roscon-uk-2025-se-workshop/2.4-task-4:-gps-integration-with-navsat_transform_node
+
 navsat_transform:
   ros__parameters:
     frequency: 10.0 #30.0

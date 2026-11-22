@@ -1,6 +1,6 @@
 # Fuse wheel odom and imu
 # Configured using : 
-# https://github.com/ros-navigation/docs.nav2.org/blob/master/tutorials/docs/navigation2_with_gps.rst
+# https://deepwiki.com/locusrobotics/roscon-uk-2025-se-workshop/2.4-task-4:-gps-integration-with-navsat_transform_node
 
 efk_local :
   ros__parameters:
