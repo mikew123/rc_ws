@@ -348,8 +348,8 @@ The odometry for the robot comes from 3 sources:
 - The IMU provides angular velocity and a compass heading
 - GPS provides absolute position lat,lon (X,Y) for localization.<br>
 
-### Drive shaft roation encoder
-The rotation of the driveshaft from the transmission to the wheels uses a GoBuilda. It is pressed against a driveshaft coupling that does not move as the suspensions bounces using the spring and a custom 3D printed mounting bracket. The bracket connects to the chassis with 3 bolts and has adjustment for spring tension onto the drive shaft coupler.<br>
+### Drive shaft rotation encoder
+The rotation of the driveshaft from the transmission to the wheels uses a GoBuilda odometry pod wheel. It is pressed against a driveshaft coupling that does not move as the suspensions bounces using the spring and a custom 3D printed mounting bracket. This meaures the rotation speed of the driveshaft which is converted to wheel rotation speed which gives the forward/reverse linear velocity X. The bracket connects to the chassis with 3 bolts and has adjustment for spring tension onto the drive shaft coupler.<br>
 <img src="support\GoBuilda_odometry_pod.jpg"><br>
 <img src="support\ShaftEncoderMount.jpg"><br>
 <img src="support\ShaftEncoderPicture.jpg"><br>
@@ -441,8 +441,11 @@ The 3rd party libraries are used by launching them within the rc25 launch file<b
 
 ## TF link map
 The oak-d physical component TF frames are created in ros_coneslayer and connected to in the URDF file<br>
-The complete TF frame map (pdftoppm -png rc25_08_17_25.pdf rc25_08_17_25):<br>
+The complete TF frame map using (ros2 run tf2_tools view_frames) to create the pdf and (pdftoppm -png frames_2026-11-22_17.40.31-1.pdf frames_2026-11-22_17.40.31-1) to convert to png:<br>
 <img src="support/frames_2026-11-22_17.40.31-1.png"><br>
+TF map->odom is generated in the efk_local_config.yaml.<br>
+TF odom->base_footprint is generated in the efk_global_config.yaml.<br>
+
 
 ## Waypoints
 The way points are set using a YAML formated waypoints file. The starting pose and waypoints can be in either X,Y or lat/lon format. The GPS can be enabled or not. The waypoints file are in the /sambashare directory so that the PC can easily acces them remotely<br>
