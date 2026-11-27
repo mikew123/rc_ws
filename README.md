@@ -198,10 +198,11 @@ The ESC motor and servo signals are connected to the OUT pins of the RC switch m
 The ESC throttle signals are switched using analog switches. The throttle signals I used are a bi-directional serial protocol instead of a PWM protocol for better reolution and the get telemetry from the ESC.<br>
 The controler pins are hard wired to the SLAVE pins of the RC switch.<br>
 The controller USB supplies the power only to the micro controller</br>
-The DC-DC converters are inside the waterproof box. The power input from the battery has an in-line fuse which is not in the box to protect the batteries from an electrical short.</br>
-<img src="support/engine_compartment_electronics_module.jpg"></br>
+The DC-DC converters are inside the waterproof box. The power input from the battery has an in-line fuse which is not in the box to protect the batteries from an electrical short. The voltage regulators were modified to output 9.5V instead of 6V. (Note the hot glue on the back side of the regulator modules which protects the added resistor.)</br>
 <br>
 <img src="support/RCX6_engine_electronics_schematic.jpg"></br>
+<br>
+<img src="support/engineController.jpg"></br>
 
 
 ### IMU and GPS Controller Board
@@ -358,6 +359,7 @@ The rotation of the driveshaft from the transmission to the wheels uses a GoBuil
 # ROS code
 NOTE: AI generated summaries.<br>
 NOTE: Needs to be updated for 2026 as needed.<br>
+The imu_gps_node, tof_node and wheel_controller_node were converted to C++ using AI. This saved a lot of CPU usage. The python serial interface code seemed to be what was consuming a lot of CPU cycles, C== was a lot more efficient.<br>
 
 ### Teleoperation Node — `robocolumbus25_teleop_node.py`
 
@@ -386,7 +388,7 @@ NOTE: Needs to be updated for 2026 as needed.<br>
 - **Publishes:** `/cone_point_cam` (`geometry_msgs/PointStamped`), `/cone_point_lidar` (`geometry_msgs/PointStamped`), `/json_msg` (`std_msgs/String`).
 - **Behavior:** Filters and validates camera detections (bounding-box checks + median-7 distance filter) and processes LIDAR scans to find cone-like clusters using distance-jump detection and width/ratio validation; publishes detected cone coordinates in appropriate TF frames (`oak-d_frame`, `lidar_link`) and emits TTS/status JSON when sensors activate or lose track.
 
-### TOF Node — `robocolumbus25_tof_node.py`
+### TOF Node — `robocolumbus25_tof_node.cpp`
 
 - **Purpose:** Publishes point clouds and raw distance arrays from serial-connected RP2040 TOF sensors (front/rear, left/center/right).
 - **Subscribes:** `json_msg` (`std_msgs/String`).
@@ -395,7 +397,7 @@ NOTE: Needs to be updated for 2026 as needed.<br>
 
 
 
-### Wheel Controller Node — `robocolumbus25_wheel_controler_node.py`
+### Wheel Controller Node — `robocolumbus25_wheel_controler_node.cpp`
 
 - **Purpose:** Controls rear wheel velocity and front steering angle for the Jeep robot using Ackermann steering. Arbitrates between `/cmd_vel` (from ROS2 navigator) and `/cmd_vel/teleop` (from teleop node); teleop commands take priority for 1 second after receipt, blocking navigation commands during that time.
 - **Subscribes:** `/cmd_vel` (`geometry_msgs/Twist`), `/cmd_vel/teleop` (`geometry_msgs/Twist`), `json_msg` (`std_msgs/String`).
@@ -420,7 +422,7 @@ NOTE: Needs to be updated for 2026 as needed.<br>
 
 
 
-### IMU & GPS Node — `robocolumbus25_imu_gps_node.py`
+### IMU & GPS Node — `robocolumbus25_imu_gps_node.cpp`
 
 - **Purpose:** Reads JSON sensor packets from a serial-connected RP2040 and publishes standard ROS2 IMU/GPS messages.
 - **Subscribes:** `json_msg` (`std_msgs/String`), `gps_nav` (`sensor_msgs/NavSatFix`).
