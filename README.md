@@ -145,8 +145,13 @@ This module has both a GPS receiver and a Compass. I could never get the compass
 Amazon Matek M10Q-5883 GNSS Compass Module GNSS Ublox SAM-M10Q QMC5883L Magnetic Compass for RC Drone FPV Racing.<br>
 <https://www.amazon.com/M10Q-5883-Compass-SAM-M10Q-QMC5883L-Magnetic/dp/B0BZ7VJKHV>
 
+# Power subsystem
+The power susbsytem can ho-swap between the battery voltage and the external power supply voltage. This allows development and bring up with out turning on the battery system in the chassis. The battery can then be enabled and the external power cord removed without re-booting. Also the external power can be applied and the battery shut off without re-booting.<br>
+The LiPo battery 12V is regulated down to 9.5V in the engine electrincs box and has a seperate regulator for the Pi5 computer and the powered hub for the sensors, speaker, wifi etc. The regulated battery voltage is enabled when the battery power in the chassis is enabled by pressing a button under the passenger fron wheel well (these regulators are a carry-over from the original design with no cabin regulators)<br>
+The battery power and the external power is connected to two 5V regulators using Schotky diodes to isolate them. There is a seperate regulator for the Pi5 computer and the powered hub. The voltage inputs to the schotky diodes have capacitors and the outputs of the regulators each have capacitors to stabilize the power. <br>
+<img src="support/rc26_PowerSubsystem.png"> <br>
 
-# 2026 Electronics in Jeep cabin
+# Electronics/sensors in Jeep cabin
 The sensors and computer etc. were installed in the Jeep cabin for protection from outside dirt and rain etc. <br>
 <br>
 This picture shows the connections from the cabin to the under the hood electronics.<br> 
@@ -171,18 +176,9 @@ This is a picture of the Jeep rear panel. It has three TOF sensors mounted like 
 <img src="support/rc25_rear_panel.jpeg"> <br>
 <br>
 
-# 2025 Development rig
-For 2025 the development was performed using the parts mounted on a board which was mounted on the chassis, the components were not in the Jeep cabin but the sensors were place close to the desired final positions in the Jeep cabin.<br> 
-<img src="support/Rc25DevelopmentRig.jpg">
-
-In 2026 the electronics were placed in the Jeep cabin and the only components outside are the Lidar mounted on the roof and the front and back TOF sensor arrays which mount on the jeep body above the bumpers. There are long I2C cables fron the tof controller board to the sensors which are attached to the bumpers using blue tape during development.<br>
-
-????The Pi5 with SSD and the USB hub are mounted in the cabin. The Pi5 and USB hub are powered from seperate regulators from the batteries or external 12V supply.<br>
-<img src="support/Pi5wSsdAndUsbHub.jpg">
-
-
-# Electronics in engine compartment
+# Electronics/sensors in engine compartment
 A waterproof box is mounted to the rear battery holder. This box holds the DC-DC converters for the electronics in the cabin, the servo signal mux and a micro controller to manage the servo switch and send some telemetry to the computer in the cabin. The servo switch defaults to connecting the RC receiver to the motor and servos.</br>
+The speed of the motor/wheels is measured using the odometry pod qautrature sensor. <br>
 I needed to augment the polulu PWM switch module with analog switches for the throttle signal which had better performance using the serial protocol instead of the servo type PWM. If I did it over I would have also used analog switches for the steering and shift PWM signals.<br>
 NOTE: This photo is older and does not have the analog switches.<br>
 <img src="support/RCX6-engine_compartment_with_new electronics.jpg">
@@ -281,7 +277,8 @@ Enable computer control: Steering CW, toggle Shift DOWN then UP<br>
 Enable receiver control: Steering CCW, toggle Shift DOWN the UP<br>
 - From computer<br>
 Send JSON message<br>
-### Kill switch
+## Kill switch
+### RC controller Kill Switch
 The remote control transmitter can be used as a "kill" switch to stop and resume robot movements. The kill switch operation can be used when the engine controller is controlled by the computer in "cv" mode. Turning off the remote transmitter or switching out of "cv" mode disables the kill switch and it must be re-enabled next time it is in "cv" mode<br>
 The engine must be in computer control mode "cv":<br>
 The shift action is to press the shift switch up the down.<br>
@@ -291,6 +288,10 @@ The shift action is to press the shift switch up the down.<br>
 - Unlatch the kill switch: Pull the trigger (must re-latch if desired)<br>
 
 While the kill switch is enabled releasing the trigger will stop any movement. Pulling the trigger will resume movement. Changing mode or powering the transmitter OFF will disable the latch.<br>
+
+### Game controller Kill Switch
+The game controller uses the left bumper (LB) button for the kill switch function. Pressing it activates the Kill Switch acitive mode. Holding it over-rides the kill function. Releasing it causes the robot to stop and it can move again if the button is pressed.<br>
+When initially activated the kill switch active mode is maintained until the code is stopped and re-started.<br>
 
 ## JSON messages
 ### Congfigure messages from the computer
